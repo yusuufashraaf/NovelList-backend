@@ -7,7 +7,12 @@ const app = express();
 app.use(express.json());
 
 // Routes
-// app.use("/api/users",);
+// app.use("/api/v1/users",);
+// app.use("/api/v1/users",);
+// app.use("/api/v1/users",);
+// app.use("/api/v1/users",);
+// app.use("/api/v1/users",);
+// app.use("/api/v1/users",);
 
 // Error handler
 app.use((err, req, res, next) => {
