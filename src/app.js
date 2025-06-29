@@ -1,14 +1,20 @@
 const express = require("express");
-const AppError = require("../utils/AppError");
+// eslint-disable-next-line import/no-extraneous-dependencies
+const morgan = require("morgan");
+
+
 const errorHandel = require("../middlewares/errorHandel");
+const AppError = require("../utils/AppError");
+const brandRouter = require("../routes/brand");
 
 const app = express();
+app.use(morgan("dev"));
 
 // Middleware
 app.use(express.json());
 
 // Routes
-// app.use("/api/v1/users",);
+app.use("/api/v1/brands",brandRouter);
 // app.use("/api/v1/users",);
 // app.use("/api/v1/users",);
 // app.use("/api/v1/users",);

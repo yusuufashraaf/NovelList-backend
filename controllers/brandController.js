@@ -1,7 +1,7 @@
 const expressAsyncHandler = require("express-async-handler");
 const slugify = require("slugify");
-const Brand = require("../../models/brand");
-const AppError = require('../../utils/AppError');
+const Brand = require("../models/brand");
+const AppError = require('../utils/AppError');
 
 
 
