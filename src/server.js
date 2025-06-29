@@ -9,6 +9,9 @@ const server = app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
+
+
+
 //  for any error out of server or express like  lose connection to database or different error in promise functions
 process.on("unhandledRejection", (err) => {
   console.error(`unhandledRejection error : ${err.message}`);

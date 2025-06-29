@@ -1,5 +1,6 @@
 const express = require("express");
 const AppError = require("../utils/AppError");
+const errorHandel = require("../middlewares/errorHandel");
 
 const app = express();
 
@@ -15,14 +16,17 @@ app.use(express.json());
 // app.use("/api/v1/users",);
 
 // Error handler
-app.use((err, req, res, next) => {
-  res.status(500).json({ error: err.message });
-});
+
 
 // 404 handler
 app.use((req,res,next)=>{
     next(new AppError(404,`can't find this route ${req.originalUrl}`));
 })
+
+// Global error handler
+app.use(errorHandel)
+
+
 
 
 module.exports = app;
