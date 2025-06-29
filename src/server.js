@@ -1,10 +1,18 @@
-// require("dotenv").config();
-// const http = require("http");
-// const app = require("./app");
+const app = require("./app");
+const connectDB = require("../config/connectDB");
+require("dotenv").config();
 
-// const PORT = process.env.PORT || 3000;
-// const server = http.createServer(app);
+const PORT = process.env.PORT || 3000;
 
-// server.listen(PORT, () => {
-//   console.log(`Server running on http://localhost:${PORT}`);
-// });
+const server = app.listen(PORT, () => {
+  connectDB();
+  console.log(`Server running on http://localhost:${PORT}`);
+});
+
+//  for any error out of server or express like  lose connection to database or different error in promise functions
+process.on("unhandledRejection", (err) => {
+  console.error(`unhandledRejection error : ${err.message}`);
+  server.close(() => {
+    process.exit(1);
+  });
+});
