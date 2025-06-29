@@ -27,23 +27,23 @@ const createOrder = async (req,res)=>{
 
         const order = await client().execute(request); 
         const approvalUrl = order.result.links.find(link => link.rel === 'approve').href;
-
-        await saveTransactionToDB({        // i will make this function after connecting with database
-            id: trxRef,
-            paypalOrderId: order.result.id,
-            amount: amount,
-            status: 'PENDING'
-        });
+// i will make this function after connecting with database
+        // await saveTransactionToDB({        
+        //     id: trxRef,
+        //     paypalOrderId: order.result.id,
+        //     amount: amount,
+        //     status: 'PENDING'
+        // });
         res.json({ approvalUrl });
         
   } catch (error) {
      console.error('PayPal Error:', error);
     // Save failed transaction
-    await saveTransactionToDB({        
-      id: uuidv4(),
-      status: 'FAILED',
-      error: error.message
-    });
+    // await saveTransactionToDB({        
+    //   id: uuidv4(),
+    //   status: 'FAILED',
+    //   error: error.message
+    // });
     res.status(500).json({ error: 'Payment initialization failed' });
   
   }
