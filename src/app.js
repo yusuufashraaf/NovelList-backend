@@ -1,11 +1,12 @@
 const express = require("express");
+
 const app = express();
 
 // Middleware
 app.use(express.json());
 
 // Routes
-app.use("/api/users", require("./routes/user.routes"));
+// app.use("/api/users",);
 
 // Error handler
 app.use((err, req, res, next) => {
