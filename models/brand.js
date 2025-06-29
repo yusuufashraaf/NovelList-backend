@@ -14,12 +14,11 @@ const BrandSchema = new mongoose.Schema({
         type: String,
         lowercase: true
     },
-    book:{
+    product:{
         type: mongoose.Schema.ObjectId,
         ref:"Product"
     },
 
-    image: String,
 }, { timestamps: true })
 
 BrandSchema.index({ name: 1 }, { unique: true })

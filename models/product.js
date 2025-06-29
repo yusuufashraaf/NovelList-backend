@@ -55,10 +55,7 @@ const productSchema = new mongoose.Schema({
         ref: "SubCategory",
         trim: true
     }],
-    brand: {
-        type: mongoose.Schema.ObjectId,
-        ref: "Brand"
-    },
+   
 
     ratingAverage: {
         type: Number,
