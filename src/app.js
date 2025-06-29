@@ -5,6 +5,8 @@ const morgan = require("morgan");
 
 const errorHandel = require("../middlewares/errorHandel");
 const AppError = require("../utils/AppError");
+const categoryRouter = require("../routes/category");
+const subCategoryRouter = require("../routes/subCategory");
 const brandRouter = require("../routes/brand");
 
 const app = express();
@@ -14,8 +16,9 @@ app.use(morgan("dev"));
 app.use(express.json());
 
 // Routes
+app.use("/api/v1/categories",categoryRouter);
+app.use("/api/v1/subCategories",subCategoryRouter);
 app.use("/api/v1/brands",brandRouter);
-// app.use("/api/v1/users",);
 // app.use("/api/v1/users",);
 // app.use("/api/v1/users",);
 // app.use("/api/v1/users",);
