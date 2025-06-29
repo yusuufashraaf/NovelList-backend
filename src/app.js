@@ -21,6 +21,10 @@ app.use(express.json());
 // Routes
 app.use("/api/v1/users", require("../routes/userRoute"));
 
+//paypal
+const paypalRoutes = require ("./../routes/paypal.route");
+app.use("/buy", paypalRoutes);
+
 // Error handler
 app.use((err, req, res, next) => {
   res.status(500).json({ error: err.message });
