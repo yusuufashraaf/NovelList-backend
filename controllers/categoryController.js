@@ -90,7 +90,7 @@ const deleteCategory = expressAsyncHandler(async (req, res,next) => {
 
     const category = await Category.findOneAndDelete({_id:id});
 
-    if(!category.length ){
+    if(!category ){
         return  next( new  AppError(404,"Category not found"));
     }
 

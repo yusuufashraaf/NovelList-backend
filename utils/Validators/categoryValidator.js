@@ -12,7 +12,7 @@ const createCategoryValidator = [
     check("name")
         .notEmpty().withMessage("Category name is required")
         .isLength({min:3}).withMessage("Category name must be at least 3 characters")
-        .isLength({max:20}).withMessage("Category name must be less than 30 characters"),
+        .isLength({max:30}).withMessage("Category name must be less than 30 characters"),
 
     validateMongoId
 ];
