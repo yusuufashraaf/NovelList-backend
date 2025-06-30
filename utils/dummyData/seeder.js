@@ -1,24 +1,24 @@
-import fs  from 'fs';
-import dotenv from 'dotenv';
-import Product from '../../Models/product.js';
-import connectDB from '../../DataBase/connectDB.js';
-import colors from 'colors';
-import path from 'path';
-import { fileURLToPath } from 'url';
+// eslint-disable-next-line import/no-extraneous-dependencies
+require('colors');
+const fs = require('fs');
+const dotenv = require('dotenv');
+const Product = require('../../models/product');
+const dbConnection = require('../../config/connectDB');
 
-dotenv.config();
-connectDB();
+dotenv.config({ path: '../../config.env' });
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// connect to DB
+dbConnection();
 
-const filePath = path.join(__dirname, 'product.json');
-const products = JSON.parse(fs.readFileSync(filePath));
+// Read data
+const products = JSON.parse(fs.readFileSync('./products.json'));
+
 
 // Insert data into DB
 const insertData = async () => {
   try {
     await Product.create(products);
+
     console.log('Data Inserted'.green.inverse);
     process.exit();
   } catch (error) {
