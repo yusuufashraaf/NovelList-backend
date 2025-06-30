@@ -44,12 +44,22 @@ const addproduct  =  expressAsyncHandler(async (req,res,next)=>{
 
 
 const getAllProducts = expressAsyncHandler( async (req,res,next)=>{
+    //filtering 
+    const queryStrObject = {...req.query};
+    const excludedFields = ["page", "sort", "limit", "fields"];
+    excludedFields.forEach(el => delete queryStrObject[el]);
 
+    // pagination
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 8;
     const skip = (page - 1) * limit ; 
 
-    const product = await Product.find().skip(skip).limit(limit).populate({path:"category", select:"name -_id"});
+
+    //mongoose query
+    const mongooseQuery = Product.find(queryStrObject).skip(skip).limit(limit).populate({path:"category", select:"name -_id"});
+    
+    //execute query
+    const product = await mongooseQuery;
 
     if(product.length === 0){
 
