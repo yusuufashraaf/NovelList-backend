@@ -42,7 +42,7 @@ const addSubCategory = expressAsyncHandler(async (req, res, next) => {
     next();
 }
 const getSubCategories = expressAsyncHandler(async (req, res, next) => {
-    const {categoryId} = req.params;
+    // const {categoryId} = req.params;
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 12;
     const skip = (page - 1) * limit;
