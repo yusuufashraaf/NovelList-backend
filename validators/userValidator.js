@@ -27,6 +27,7 @@ exports.createUserValidator = [
         .isLength({ min: 6 })
         .withMessage('Password must be at least 6 characters long')
         .isLength({ max: 32 })
-        .withMessage('Password must be less than 32 characters long')
-
+        .withMessage('Password must be less than 32 characters long'),
+    check('role')
+        .optional()
 ]
