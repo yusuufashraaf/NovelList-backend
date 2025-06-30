@@ -3,7 +3,10 @@ const express = require("express");
 // eslint-disable-next-line import/no-extraneous-dependencies
 const morgan = require("morgan");
 const mongoose = require("mongoose");
+const cors = require('cors');
 
+const app = express();
+app.use(cors());
 
 const errorHandel = require("../middlewares/errorHandel");
 const AppError = require("../utils/AppError");
@@ -11,10 +14,8 @@ const categoryRouter = require("../routes/category");
 const subCategoryRouter = require("../routes/subCategory");
 const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
+const paypalRoutes = require ("../routes/paypalRoute");
 
-const app = express();
-const cors = require('cors');
-app.use(cors());
 
 app.use(morgan("dev"));
 
@@ -42,7 +43,6 @@ app.use("/api/v1/brands",brandRouter);
 app.use("/api/v1/products",productRouter);
 
 //paypal
-const paypalRoutes = require ("./../routes/paypalRoute");
 app.use("/buy", paypalRoutes);
 
 // 404 handler
