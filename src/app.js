@@ -1,38 +1,41 @@
 const express = require("express");
-const mongoose = require("mongoose");
+// eslint-disable-next-line import/no-extraneous-dependencies
+const morgan = require("morgan");
+
+
+const errorHandel = require("../middlewares/errorHandel");
+const AppError = require("../utils/AppError");
+const categoryRouter = require("../routes/category");
+const subCategoryRouter = require("../routes/subCategory");
+const brandRouter = require("../routes/brand");
+
 const app = express();
-const cors = require('cors');
-app.use(cors());
-
-
-require("dotenv").config();
-
-// Database connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => {
-    console.log("Connected to MongoDB");
-  })
-  .catch((error) => {
-    console.error("Error connecting to MongoDB:", error);
-  });
-
+app.use(morgan("dev"));
 
 // Middleware
 app.use(express.json());
 
 // Routes
-app.use("/api/v1/users", require("../routes/userRoute"));
-
-//paypal
-const paypalRoutes = require ("./../routes/paypal.route");
-app.use("/buy", paypalRoutes);
+app.use("/api/v1/categories",categoryRouter);
+app.use("/api/v1/subCategories",subCategoryRouter);
+app.use("/api/v1/brands",brandRouter);
+// app.use("/api/v1/users",);
+// app.use("/api/v1/users",);
+// app.use("/api/v1/users",);
+// app.use("/api/v1/users",);
 
 // Error handler
-app.use((err, req, res, next) => {
-  res.status(500).json({ error: err.message });
-});
+
+
+// 404 handler
+app.use((req,res,next)=>{
+    next(new AppError(404,`can't find this route ${req.originalUrl}`));
+})
+
+// Global error handler
+app.use(errorHandel)
+
+
+
 
 module.exports = app;
