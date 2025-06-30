@@ -10,36 +10,39 @@ const addProductValidator = [
     .isLength({ min: 3 })
     .withMessage("must be at least 3 chars")
     .notEmpty()
-    .withMessage("Product required")
+    .withMessage("Book title is required")
     .custom((val, { req }) => {
       req.body.slug = slugify(val);
       return true;
     }),
   check("description")
     .notEmpty()
-    .withMessage("Product description is required")
+    .withMessage("Book description is required")
     .isLength({ max: 2000 })
     .withMessage("Too long description"),
   check("quantity")
     .notEmpty()
-    .withMessage("Product quantity is required")
+    .withMessage("Book quantity is required")
     .isNumeric()
-    .withMessage("Product quantity must be a number"),
-  check("stock")
+    .withMessage("Book quantity must be a number"),
+  check("author")
+    .notEmpty()
+    .withMessage("Book author is required"),
+  check("sold")
     .optional()
     .isNumeric()
-    .withMessage("Product quantity must be a number"),
+    .withMessage("Book quantity must be a number"),
   check("price")
     .notEmpty()
-    .withMessage("Product price is required")
+    .withMessage("Book price is required")
     .isNumeric()
-    .withMessage("Product price must be a number")
+    .withMessage("Book price must be a number")
     .isLength({ max: 32 })
     .withMessage("To long price"),
   check("priceAfterDiscount")
     .optional()
     .isNumeric()
-    .withMessage("Product priceAfterDiscount must be a number")
+    .withMessage("Book priceAfterDiscount must be a number")
     .toFloat()
     .custom((value, { req }) => {
       if (req.body.price <= value) {
@@ -48,18 +51,15 @@ const addProductValidator = [
       return true;
     }),
 
-  check("colors")
-    .optional()
-    .isArray()
-    .withMessage("availableColors should be array of string"),
-  check("imageCover").notEmpty().withMessage("Product imageCover is required"),
+  
+  check("imageCover").notEmpty().withMessage("Book imageCover is required"),
   check("images")
     .optional()
     .isArray()
     .withMessage("images should be array of string"),
   check("category")
     .notEmpty()
-    .withMessage("Product must be belong to a category")
+    .withMessage("Book must be belong to a category")
     .isMongoId()
     .withMessage("Invalid ID formate")
     .custom((categoryId) =>
