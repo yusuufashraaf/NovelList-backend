@@ -1,32 +1,28 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
-require('colors');
+
 const fs = require('fs');
+const path = require('path');
 const dotenv = require('dotenv');
 const Product = require('../../models/product');
 const dbConnection = require('../../config/connectDB');
 
-dotenv.config({ path: '../../config.env' });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
-// connect to DB
 dbConnection();
 
-// Read data
-const products = JSON.parse(fs.readFileSync('./products.json'));
+const filePath = path.join(__dirname, 'product.json');
+const products = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
-
-// Insert data into DB
 const insertData = async () => {
   try {
     await Product.create(products);
-
     console.log('Data Inserted'.green.inverse);
     process.exit();
   } catch (error) {
     console.log(error);
+    process.exit(1);
   }
 };
 
-// Delete data from DB
 const destroyData = async () => {
   try {
     await Product.deleteMany();
@@ -34,10 +30,10 @@ const destroyData = async () => {
     process.exit();
   } catch (error) {
     console.log(error);
+    process.exit(1);
   }
 };
 
-// node seeder.js -d
 if (process.argv[2] === '-i') {
   insertData();
 } else if (process.argv[2] === '-d') {
