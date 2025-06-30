@@ -25,7 +25,9 @@
     "prettier": "^3.6.2"
   },
   "dependencies": {
+    "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/paypal-server-sdk": "^1.1.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
     "express-async-handler": "^1.2.0",
