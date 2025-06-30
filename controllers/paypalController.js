@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const { client } = require('../services/paypal.service');
+const { client } = require('../services/paypalService');
 const paypal = require('@paypal/checkout-server-sdk');
 const { v4: uuidv4 } = require('uuid');
 

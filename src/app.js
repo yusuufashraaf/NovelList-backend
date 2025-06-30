@@ -42,7 +42,7 @@ app.use("/api/v1/brands",brandRouter);
 app.use("/api/v1/products",productRouter);
 
 //paypal
-const paypalRoutes = require ("./../routes/paypal.route");
+const paypalRoutes = require ("./../routes/paypalRoute");
 app.use("/buy", paypalRoutes);
 
 // 404 handler
