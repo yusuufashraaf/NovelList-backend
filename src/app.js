@@ -8,6 +8,7 @@ const AppError = require("../utils/AppError");
 const categoryRouter = require("../routes/category");
 const subCategoryRouter = require("../routes/subCategory");
 const brandRouter = require("../routes/brand");
+const productRouter = require("../routes/product");
 
 const app = express();
 app.use(morgan("dev"));
@@ -19,7 +20,7 @@ app.use(express.json());
 app.use("/api/v1/categories",categoryRouter);
 app.use("/api/v1/subCategories",subCategoryRouter);
 app.use("/api/v1/brands",brandRouter);
-// app.use("/api/v1/users",);
+app.use("/api/v1/users",productRouter);
 // app.use("/api/v1/users",);
 // app.use("/api/v1/users",);
 // app.use("/api/v1/users",);
