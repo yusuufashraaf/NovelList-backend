@@ -13,6 +13,8 @@ const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
 
 const app = express();
+const cors = require('cors');
+app.use(cors());
 
 app.use(morgan("dev"));
 
@@ -38,6 +40,10 @@ app.use("/api/v1/categories",categoryRouter);
 app.use("/api/v1/subCategories",subCategoryRouter);
 app.use("/api/v1/brands",brandRouter);
 app.use("/api/v1/products",productRouter);
+
+//paypal
+const paypalRoutes = require ("./../routes/paypal.route");
+app.use("/buy", paypalRoutes);
 
 // 404 handler
 app.use((req,res,next)=>{
