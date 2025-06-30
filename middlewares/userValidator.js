@@ -37,3 +37,22 @@ exports.createUserValidator = [
   check('role')
     .optional()
 ];
+
+exports.loginUserValidator = [
+  check('email')
+    .notEmpty().withMessage('Email is required')
+    .isEmail().withMessage('Please include a valid email'),
+
+  check('password')
+    .notEmpty().withMessage('Password is required')
+    .custom(async (value, { req }) => {
+      const user = await User.findOne({ email: req.body.email });
+      if (!user || !(await user.matchPassword(value))) {
+        throw new Error('Bad credentials');
+      }
+
+      // Attach user to req for later use (e.g. in controller)
+      req.user = user;
+      return true;
+    })
+];

@@ -1,4 +1,5 @@
 const User = require("../models/userAuthModel");
+const bcrypt = require("bcryptjs");
 
 //get all users for only admin
 // route: /api/v1/users method: get
@@ -40,9 +41,33 @@ exports.createUser = async (req, res) => {
 //route: /api/v1/users/:id method: patch
 exports.updateUser = async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(req.params.id, req.body, {
+        const user = await User.findByIdAndUpdate(req.params.id, 
+            {
+                name: req.body.name,
+                email: req.body.email,
+                role: req.body.role
+            }, 
+            {
             new: true,
-        });
+            });
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        res.status(200).json(user);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+exports.changePassword = async (req, res) => {
+    try {
+        const user = await User.findByIdAndUpdate(req.params.id, 
+            {
+                password: await bcrypt.hash(req.body.password, 12)
+            }, 
+            {
+            new: true,
+            });
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
@@ -67,15 +92,12 @@ exports.deleteUser = async (req, res) => {
 };
 
 exports.loginUser = async (req, res) => {
-    try {
-        const user = await User.findOne({ email: req.body.email });
-        if (!user) {
-            return res.status(404).json({ error: "User not found" });
-        }
-        res.status(200).json(user);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
+  try {
+    const user = req.user; // already validated and attached
+    res.status(200).json({ message: 'Login successful', user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 };
 
 exports.registerUser = async (req, res) => {
