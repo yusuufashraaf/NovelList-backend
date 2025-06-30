@@ -25,6 +25,8 @@
     "prettier": "^3.6.2"
   },
   "dependencies": {
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "@paypal/paypal-server-sdk": "^1.1.0",
     "cors": "^2.8.5",
     "dotenv": "^17.0.0",
     "express": "^5.1.0",
@@ -32,6 +34,7 @@
     "express-validator": "^7.2.1",
     "mongoose": "^8.16.1",
     "morgan": "^1.10.0",
-    "slugify": "^1.6.6"
+    "slugify": "^1.6.6",
+    "uuid": "^11.1.0"
   }
 }

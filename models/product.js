@@ -19,11 +19,16 @@ const productSchema = new mongoose.Schema({
         trim: true,
         minlength: [20, "Too short Product Description"]
     },
+    author: {
+        type: String,
+        require: [true, "Author Is Required"],
+        trim: true
+    },
     quantity: {
         type: Number,
         require: [true, " Quantity For Product Is Requied"],
     },
-    stock: {
+    sold: {
         type: Number,
         default: 0,
     },
@@ -69,6 +74,8 @@ const productSchema = new mongoose.Schema({
     }
 
 }, {timestamps: true})
+
+productSchema.index({ title:1, description:1 , category:1, subcategory:1 , author:1}, { unique: true });
 
 
 const Product = mongoose.model("Product", productSchema);
