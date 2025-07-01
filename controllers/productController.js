@@ -105,6 +105,18 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
         mongooseQuery = mongooseQuery.select("-__v");
     }
 
+    // 9. search functionality
+    if (req.query.keyword) {
+        const query = {};
+        query.$or = [
+            { title: { $regex: req.query.keyword, $options: "i" } },
+            { description: { $regex: req.query.keyword, $options: "i" } },
+            { author: { $regex: req.query.keyword, $options: "i" } },
+            { category: { $regex: req.query.keyword, $options: "i" } },
+        ];
+        mongooseQuery = mongooseQuery.find(query);
+    }
+
     // 9. Execute the query
     const products = await mongooseQuery;
 
