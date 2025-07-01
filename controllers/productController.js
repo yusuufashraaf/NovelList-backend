@@ -1,9 +1,69 @@
 const expressAsyncHandler = require("express-async-handler");
 const slugify = require("slugify");
-const ApiFeatures = require('../utils/apiFeature'); 
+const ApiFeatures = require('../utils/apiFeature');
 const AppError = require("../utils/AppError");
 const Product = require("../models/product");
 const Category = require("../models/category");
+const multer = require("multer");
+const sharp = require("sharp");
+const cloudinary = require("cloudinary").v2;
+
+// --- Image Upload Setup (Multer remains the same for memory storage) ---
+const multerStorage = multer.memoryStorage();
+
+const multerFilter = (req, file, cb) => {
+    if (file.mimetype.startsWith("image")) {
+        cb(null, true);
+    } else {
+        cb(new AppError(400,"Not an image! Please upload only images."));
+    }
+};
+
+const upload = multer({
+    storage: multerStorage,
+    fileFilter: multerFilter,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+});
+
+const uploadProductImages = upload.fields([
+    { name: "imageCover", maxCount: 1 },
+    { name: "images", maxCount: 5 },
+]);
+
+// --- NEW: Middleware to upload images to Cloudinary ---
+const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
+    // 1. Upload imageCover to Cloudinary
+    if (req.files.imageCover) {
+        const result = await cloudinary.uploader.upload(
+            `data:${req.files.imageCover[0].mimetype};base64,${req.files.imageCover[0].buffer.toString('base64')}`,
+            {
+                folder: "products", 
+                // transformation: [{ width: 600, height: 600, crop: "limit" }]
+            }
+        );
+        req.body.imageCover = result.secure_url; 
+    }
+
+    // 2. Upload images (array of images) to Cloudinary
+    if (req.files.images) {
+        req.body.images = []; 
+        await Promise.all(
+            req.files.images.map(async (file) => {
+                const result = await cloudinary.uploader.upload(
+                    `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+                    {
+                        folder: "products", // نفس المجلد
+                        // transformation: [{ width: 800, height: 800, crop: "limit" }]
+                    }
+                );
+                req.body.images.push(result.secure_url); 
+            })
+        );
+    }
+
+    next(); 
+});
+
 
 const addproduct = expressAsyncHandler(async (req, res, next) => {
     const { body } = req;
@@ -28,10 +88,6 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
         },
         {
             path: "subcategory",
-            select: "name -_id",
-        },
-        {
-            path: "brand",
             select: "name -_id",
         },
     ]);
@@ -171,10 +227,10 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
     const features = new ApiFeatures(Product.find(), req.query);
 
     // Apply filters (including genre and rating)
-    await features.filter(); 
+    await features.filter();
 
     // Apply search
-    features.search('Product'); 
+    features.search('Product');
 
     // Count documents *before* pagination to get total for pagination
     // You need to clone the query to count without limit/skip
@@ -296,4 +352,6 @@ module.exports = {
     deleteProduct,
     getUniqueGenres,
     getUniqueAuthors,
+    uploadProductImages,
+    uploadImagesToCloudinary,
 };

@@ -62,49 +62,48 @@ class ApiFeatures {
         return this;
     }
 
-    search(modelName) {
-        if (this.queryString.keyword) {
-            const keyword = this.queryString.keyword;
-            const keywordSearchConditions = [];
+   search(modelName) {
+    if (this.queryString.keyword) {
+        const keyword = this.queryString.keyword;
+        const keywordSearchConditions = [];
 
-            if (modelName === 'Product') { // Use 'Product' for consistency with model name
-                // 1. Search for the entire keyword phrase (case-insensitive)
-                keywordSearchConditions.push(
-                    { title: { $regex: keyword, $options: 'i' } },
-                    { author: { $regex: keyword, $options: 'i' } } // Added author search
-                );
+        if (modelName === 'Product') {
+            // 1. Search for the entire keyword phrase (case-insensitive)
+            keywordSearchConditions.push(
+                { title: { $regex: keyword, $options: 'i' } },
+                { author: { $regex: keyword, $options: 'i' } },
+                { description: { $regex: keyword, $options: 'i' } } // <--- تم إضافة هذا السطر
+            );
 
-                // 2. Split the keyword into individual words and search for each word
-                const words = keyword.split(/\s+/).filter(Boolean);
-                if (words.length > 1) {
-                    words.forEach(word => {
-                        keywordSearchConditions.push(
-                            { title: { $regex: word, $options: 'i' } },
-                            { author: { $regex: word, $options: 'i' } }
-                        );
-                    });
-                }
-            } else if (modelName === 'Category' || modelName === 'User') { // Example for other models
-                keywordSearchConditions.push({ name: { $regex: keyword, $options: 'i' } });
+            // 2. Split the keyword into individual words and search for each word
+            const words = keyword.split(/\s+/).filter(Boolean);
+            if (words.length > 1) {
+                words.forEach(word => {
+                    keywordSearchConditions.push(
+                        { title: { $regex: word, $options: 'i' } },
+                        { author: { $regex: word, $options: 'i' } },
+                        { description: { $regex: word, $options: 'i' } } // <--- تم إضافة هذا السطر
+                    );
+                });
             }
-            // Add more model-specific search logic as needed
-
-            // Combine keyword search conditions with existing queryConditions using $and
-            if (keywordSearchConditions.length > 0) {
-                // Ensure queryConditions has an $and array if it doesn't already
-                this.queryConditions.$and = this.queryConditions.$and || [];
-                this.queryConditions.$and.push({ $or: keywordSearchConditions });
-            }
+        } else if (modelName === 'Category' || modelName === 'User') {
+            keywordSearchConditions.push({ name: { $regex: keyword, $options: 'i' } });
         }
-        // Apply all collected conditions to the mongoose query (re-apply after search)
-        // This is crucial if filter() was called before search()
-        this.mongooseQuery = this.mongooseQuery.find(this.queryConditions);
-        return this;
+
+        if (keywordSearchConditions.length > 0) {
+            this.queryConditions.$and = this.queryConditions.$and || [];
+            this.queryConditions.$and.push({ $or: keywordSearchConditions });
+        }
     }
+   
+    this.mongooseQuery = this.mongooseQuery.find(this.queryConditions);
+    return this;
+}
+
 
     paginate(countDocuments) {
         const page = this.queryString.page * 1 || 1;
-        const limit = this.queryString.limit * 1 || 8; // Changed default limit to 8 for consistency
+        const limit = this.queryString.limit * 1 || 8; 
         const skip = (page - 1) * limit;
         const endIndex = page * limit;
 
