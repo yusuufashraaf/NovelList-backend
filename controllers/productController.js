@@ -66,7 +66,6 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
     const limit = Number(req.query.limit) || 8;
     const skip = (page - 1) * limit;
 
-    console.log("Query String Object Query:", mongoQuery);
 
     //mongoose query
     const mongooseQuery = Product.find(mongoQuery)
@@ -80,6 +79,14 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
         mongooseQuery.sort(sortBy);
     } else {
         mongooseQuery.sort("-createdAt"); //default sorting by createdAt
+    }
+
+    //field limiting
+    if (req.query.fields) {
+        const fields = req.query.fields.split(",").join(" ");
+        mongooseQuery.select(fields);
+    }else {
+        mongooseQuery.select("-__v"); //default excluding __v field
     }
 
     //execute query
