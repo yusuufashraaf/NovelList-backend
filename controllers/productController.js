@@ -2,6 +2,7 @@ const expressAsyncHandler = require("express-async-handler");
 const slugify = require("slugify");
 const AppError = require("../utils/AppError");
 const Product = require("../models/product");
+const Category = require("../models/category");
 
 const addproduct = expressAsyncHandler(async (req, res, next) => {
     const { body } = req;
@@ -43,7 +44,6 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
 });
 
 const getAllProducts = expressAsyncHandler(async (req, res, next) => {
-    //filtering
     const queryStrObject = { ...req.query };
     const excludedFields = ["page", "sort", "limit", "fields"];
     excludedFields.forEach((el) => delete queryStrObject[el]);
@@ -77,31 +77,84 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
     if (req.query.sort) {
         const sortBy = req.query.sort.split(",").join(" ");
         mongooseQuery.sort(sortBy);
-    } else {
-        mongooseQuery.sort("-createdAt"); //default sorting by createdAt
-    }
+        // Handle genre conversion
+        if (queryStrObject.genre) {
+            const category = await Category.findOne({ name: queryStrObject.genre });
+            if (category) {
+                queryStrObject.category = category._id.toString();
+            } else {
+                return res.status(200).json({
+                    status: "success",
+                    message: "No products found for this genre",
+                    currentPage: 1,
+                    totalPages: 0,
+                    results: 0,
+                    data: [],
+                });
+            }
+            delete queryStrObject.genre;
+        }
 
-    //field limiting
-    if (req.query.fields) {
-        const fields = req.query.fields.split(",").join(" ");
-        mongooseQuery.select(fields);
-    }else {
-        mongooseQuery.select("-__v"); //default excluding __v field
-    }
+        //field limiting
+        if (req.query.fields) {
+            const fields = req.query.fields.split(",").join(" ");
+            mongooseQuery.select(fields);
+        } else {
+            mongooseQuery.select("-__v"); //default excluding __v field
+        }
 
-    //execute query
-    const product = await mongooseQuery;
+        //execute query
+        const product = await mongooseQuery;
+        // Handle rating
+        if (queryStrObject.rating) {
+            queryStrObject.ratingAverage = { $gte: Number(queryStrObject.rating) };
+            delete queryStrObject.rating;
+        }
 
-    if (product.length === 0) {
-        return next(new AppError(404, "No products Found"));
-    }
+        // Replace operators
+        let queryStr = JSON.stringify(queryStrObject);
+        queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
+        const mongoQuery = JSON.parse(queryStr);
 
-    res.status(200).json({
-        status: "Success",
-        message: "Get All Brands",
-        data: product,
-    });
-});
+        // Convert to numbers
+        for (const key in mongoQuery) {
+            if (typeof mongoQuery[key] === "object") {
+                for (const op in mongoQuery[key]) {
+                    mongoQuery[key][op] = Number(mongoQuery[key][op]);
+                }
+            }
+        }
+
+        console.log("Incoming query params:", req.query);
+
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 8;
+        const skip = (page - 1) * limit;
+
+        const totalDocuments = await Product.countDocuments(mongoQuery);
+        const totalPages = Math.ceil(totalDocuments / limit);
+
+        const mongooseQuery = Product.find(mongoQuery)
+            .skip(skip)
+            .limit(limit)
+            .populate({ path: "category", select: "name -_id" })
+            .sort(req.query.sort ? req.query.sort.split(",").join(" ") : "-createdAt");
+
+        const products = await mongooseQuery;
+
+        res.status(200).json({
+            status: "success",
+            message:
+                products.length === 0
+                    ? "No products match your filters"
+                    : "Get All Products",
+            currentPage: page,
+            totalPages,
+            results: products.length,
+            data: products,
+        });
+    };
+
 
 const getproduct = expressAsyncHandler(async (req, res, next) => {
     const { id } = req.params;
@@ -158,10 +211,37 @@ const deleteProduct = expressAsyncHandler(async (req, res, next) => {
     });
 });
 
+const getUniqueGenres = expressAsyncHandler(async (req, res, next) => {
+    // Get unique category IDs from products
+    const categoryIds = await Product.distinct("category");
+
+    // Fetch category documents matching those IDs and select only name
+    const categories = await Category.find({ _id: { $in: categoryIds } }).select(
+        "name"
+    );
+
+    // Extract just the names
+    const genres = categories.map((cat) => cat.name);
+
+    res.status(200).json({
+        genres,
+    });
+});
+
+const getUniqueAuthors = expressAsyncHandler(async (req, res, next) => {
+    const authors = await Product.distinct("author");
+
+    res.status(200).json({
+        authors,
+    });
+});
+
 module.exports = {
     addproduct,
     getAllProducts,
     getproduct,
     UpdateProduct,
     deleteProduct,
+    getUniqueGenres,
+    getUniqueAuthors,
 };
