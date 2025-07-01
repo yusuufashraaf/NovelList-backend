@@ -7,7 +7,10 @@ const {
   deleteProduct,
   getUniqueGenres,
   getUniqueAuthors,
+  uploadProductImages,
+  uploadImagesToCloudinary,
 } = require("../controllers/productController");
+
 const {
   addProductValidator,
   getProductValidator,
@@ -20,7 +23,7 @@ const productRouter = Router();
 productRouter
   .route("/")
   .get(getAllProducts)
-  .post(addProductValidator, addproduct);
+  .post(uploadProductImages,uploadImagesToCloudinary,addProductValidator, addproduct);
 
 productRouter.get("/genres", getUniqueGenres);
 productRouter.get("/authors", getUniqueAuthors);

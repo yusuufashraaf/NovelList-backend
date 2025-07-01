@@ -2,12 +2,11 @@ require("dotenv").config();
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
-const paypalRoutes = require("../routes/paypalRoute");
+const qs = require("qs");
 const mongoose = require("mongoose");
+const cloudinary = require("cloudinary").v2;
 
-const app = express();
-app.use(cors());
-
+const paypalRoutes = require("../routes/paypalRoute");
 const errorHandel = require("../middlewares/errorHandel");
 const AppError = require("../utils/AppError");
 const categoryRouter = require("../routes/category");
@@ -17,7 +16,9 @@ const productRouter = require("../routes/product");
 const cartRouter = require("../routes/cart");
 
 const userRouter = require("../routes/userRoute");
-const qs = require("qs");
+
+const app = express();
+app.use(cors());
 
 app.use(morgan("dev"));
 
@@ -33,6 +34,12 @@ app.use("/api/v1/subCategories", subCategoryRouter);
 app.use("/api/v1/brands", brandRouter);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/cart", cartRouter);
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.API_KEY,
+  api_secret: process.env.API_SECRET,
+});
 
 //paypal
 app.use("/buy", paypalRoutes);
