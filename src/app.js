@@ -4,11 +4,6 @@ const morgan = require("morgan");
 const cors = require("cors");
 const paypalRoutes = require("../routes/paypalRoute");
 const mongoose = require("mongoose");
-const cors = require('cors');
-
-
-
-
 
 const app = express();
 app.use(cors());
@@ -20,15 +15,8 @@ const subCategoryRouter = require("../routes/subCategory");
 const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
 
-const paypalRoutes = require ("../routes/paypalRoute");
-
-
 const userRouter = require("../routes/userRoute");
 const qs = require("qs");
-
-
-
-
 
 app.use(morgan("dev"));
 
