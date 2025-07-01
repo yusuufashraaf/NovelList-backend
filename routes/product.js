@@ -5,8 +5,8 @@ const {
   getproduct,
   UpdateProduct,
   deleteProduct,
-  getUniqueAuthors,
   getUniqueGenres,
+  getUniqueAuthors,
 } = require("../controllers/productController");
 const {
   addProductValidator,
