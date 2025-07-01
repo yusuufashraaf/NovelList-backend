@@ -45,10 +45,12 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
 
 
 const getAllProducts = expressAsyncHandler(async (req, res, next) => {
+    const finalQueryConditions = {}; 
+
     // 1. Clone the query object and remove control fields
     const queryObj = { ...req.query };
-    const excludedFields = ["page", "sort", "limit", "fields"];
-    excludedFields.forEach(field => delete queryObj[field]);
+    const excludedFields = ["page", "sort", "limit", "fields", "keyword"]; // Add 'keyword' to excluded
+    excludedFields.forEach((field) => delete queryObj[field]);
 
     // 2. Handle genre -> convert genre name to category ID
     if (queryObj.genre) {
@@ -63,28 +65,62 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
                 data: [],
             });
         }
-        queryObj.category = category._id.toString();
-        delete queryObj.genre;
+        finalQueryConditions.category = category._id.toString();
+        delete queryObj.genre; // Already moved to finalQueryConditions
     }
 
     // 3. Handle rating filter
     if (queryObj.rating) {
-        queryObj.ratingAverage = { $gte: Number(queryObj.rating) };
-        delete queryObj.rating;
+        finalQueryConditions.ratingAverage = { $gte: Number(queryObj.rating) };
+        delete queryObj.rating; // Already moved to finalQueryConditions
     }
 
     // 4. Advanced filtering: convert gt/gte/lt/lte
     let queryStr = JSON.stringify(queryObj);
-    queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, match => `$${match}`);
-    const mongoQuery = JSON.parse(queryStr);
+    queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
+    const parsedQueryObj = JSON.parse(queryStr);
+
+    // Merge parsedQueryObj into finalQueryConditions
+    Object.assign(finalQueryConditions, parsedQueryObj);
+
+
+    // 9-search by title and author (YOUR REVISED CODE HERE)
+    if (req.query.keyword) {
+        const keyword = req.query.keyword;
+        const keywordSearchConditions = []; // Conditions specific to keyword search
+
+        // 1. Search for the entire keyword phrase (case-insensitive)
+        keywordSearchConditions.push(
+            { title: { $regex: keyword, $options: "i" } },
+            { author: { $regex: keyword, $options: "i" } }
+        );
+
+        // 2. Split the keyword into individual words and search for each word
+        const words = keyword.split(/\s+/).filter(Boolean);
+        if (words.length > 1) {
+            words.forEach(word => {
+                keywordSearchConditions.push(
+                    { title: { $regex: word, $options: "i" } },
+                    { author: { $regex: word, $options: "i" } }
+                );
+            });
+        }
+
+        // Add the keyword search conditions to the final query using $and with $or
+        // This ensures that if other filters exist, they are ANDed with the keyword search.
+        if (keywordSearchConditions.length > 0) {
+            finalQueryConditions.$and = finalQueryConditions.$and || [];
+            finalQueryConditions.$and.push({ $or: keywordSearchConditions });
+        }
+    }
 
     // 5. Pagination setup
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 8;
     const skip = (page - 1) * limit;
 
-    // 6. Build the mongoose query
-    let mongooseQuery = Product.find(mongoQuery)
+    // 6. Build the mongoose query with all combined conditions
+    let mongooseQuery = Product.find(finalQueryConditions) // <--- Use the combined conditions here
         .skip(skip)
         .limit(limit)
         .populate({ path: "category", select: "name -_id" });
@@ -105,40 +141,27 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
         mongooseQuery = mongooseQuery.select("-__v");
     }
 
-    // 9. search functionality
-    if (req.query.keyword) {
-        const query = {};
-        query.$or = [
-            { title: { $regex: req.query.keyword, $options: "i" } },
-            { description: { $regex: req.query.keyword, $options: "i" } },
-            { author: { $regex: req.query.keyword, $options: "i" } },
-            { category: { $regex: req.query.keyword, $options: "i" } },
-        ];
-        mongooseQuery = mongooseQuery.find(query);
-    }
-
-    // 9. Execute the query
+    // 10. Execute the query
     const products = await mongooseQuery;
 
-    // 10. Count total documents for pagination
-    const totalDocuments = await Product.countDocuments(mongoQuery);
+    // 11. Count total documents for pagination
+    // Count based on the same finalQueryConditions
+    const totalDocuments = await Product.countDocuments(finalQueryConditions);
     const totalPages = Math.ceil(totalDocuments / limit);
 
-    // 11. Send response
+    // 12. Send response
     res.status(200).json({
         status: "success",
-        message: products.length === 0
-            ? "No products match your filters"
-            : "Products fetched successfully",
+        message:
+            products.length === 0
+                ? "No products match your filters"
+                : "Products fetched successfully",
         currentPage: page,
         totalPages,
         results: products.length,
         data: products,
     });
 });
-
-
-
 
 
 const getproduct = expressAsyncHandler(async (req, res, next) => {
