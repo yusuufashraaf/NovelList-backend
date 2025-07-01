@@ -43,117 +43,90 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
     });
 });
 
-const getAllProducts = expressAsyncHandler(async (req, res, next) => {
-    const queryStrObject = { ...req.query };
-    const excludedFields = ["page", "sort", "limit", "fields"];
-    excludedFields.forEach((el) => delete queryStrObject[el]);
 
-    //advanced filtering for getter than and less than because we are using mongoose query
-    let queryStr = JSON.stringify(queryStrObject);
-    queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
-    const mongoQuery = {};
-    for (const key in queryStrObject) {
-        if (key.includes("[")) {
-            const [field, operator] = key.split(/\[|\]/); // e.g., price[gte] → field = price, operator = gte
-            if (!mongoQuery[field]) mongoQuery[field] = {};
-            mongoQuery[field][`$${operator}`] = queryStrObject[key];
-        } else {
-            mongoQuery[key] = queryStrObject[key];
+const getAllProducts = expressAsyncHandler(async (req, res, next) => {
+    // 1. Clone the query object and remove control fields
+    const queryObj = { ...req.query };
+    const excludedFields = ["page", "sort", "limit", "fields"];
+    excludedFields.forEach(field => delete queryObj[field]);
+
+    // 2. Handle genre -> convert genre name to category ID
+    if (queryObj.genre) {
+        const category = await Category.findOne({ name: queryObj.genre });
+        if (!category) {
+            return res.status(200).json({
+                status: "success",
+                message: "No products found for this genre",
+                currentPage: 1,
+                totalPages: 0,
+                results: 0,
+                data: [],
+            });
         }
+        queryObj.category = category._id.toString();
+        delete queryObj.genre;
     }
-    // pagination
+
+    // 3. Handle rating filter
+    if (queryObj.rating) {
+        queryObj.ratingAverage = { $gte: Number(queryObj.rating) };
+        delete queryObj.rating;
+    }
+
+    // 4. Advanced filtering: convert gt/gte/lt/lte
+    let queryStr = JSON.stringify(queryObj);
+    queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, match => `$${match}`);
+    const mongoQuery = JSON.parse(queryStr);
+
+    // 5. Pagination setup
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 8;
     const skip = (page - 1) * limit;
 
-
-    //mongoose query
-    const mongooseQuery = Product.find(mongoQuery)
+    // 6. Build the mongoose query
+    let mongooseQuery = Product.find(mongoQuery)
         .skip(skip)
         .limit(limit)
         .populate({ path: "category", select: "name -_id" });
 
-    //sorting
+    // 7. Sorting
     if (req.query.sort) {
         const sortBy = req.query.sort.split(",").join(" ");
-        mongooseQuery.sort(sortBy);
-        // Handle genre conversion
-        if (queryStrObject.genre) {
-            const category = await Category.findOne({ name: queryStrObject.genre });
-            if (category) {
-                queryStrObject.category = category._id.toString();
-            } else {
-                return res.status(200).json({
-                    status: "success",
-                    message: "No products found for this genre",
-                    currentPage: 1,
-                    totalPages: 0,
-                    results: 0,
-                    data: [],
-                });
-            }
-            delete queryStrObject.genre;
-        }
-
-        //field limiting
-        if (req.query.fields) {
-            const fields = req.query.fields.split(",").join(" ");
-            mongooseQuery.select(fields);
-        } else {
-            mongooseQuery.select("-__v"); //default excluding __v field
-        }
-
-        //execute query
-        const product = await mongooseQuery;
-        // Handle rating
-        if (queryStrObject.rating) {
-            queryStrObject.ratingAverage = { $gte: Number(queryStrObject.rating) };
-            delete queryStrObject.rating;
-        }
-
-        // Replace operators
-        let queryStr = JSON.stringify(queryStrObject);
-        queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
-        const mongoQuery = JSON.parse(queryStr);
-
-        // Convert to numbers
-        for (const key in mongoQuery) {
-            if (typeof mongoQuery[key] === "object") {
-                for (const op in mongoQuery[key]) {
-                    mongoQuery[key][op] = Number(mongoQuery[key][op]);
-                }
-            }
-        }
-
-
-        const page = Number(req.query.page) || 1;
-        const limit = Number(req.query.limit) || 8;
-        const skip = (page - 1) * limit;
-
-        const totalDocuments = await Product.countDocuments(mongoQuery);
-        const totalPages = Math.ceil(totalDocuments / limit);
-
-        const mongooseQuery = Product.find(mongoQuery)
-            .skip(skip)
-            .limit(limit)
-            .populate({ path: "category", select: "name -_id" })
-            .sort(req.query.sort ? req.query.sort.split(",").join(" ") : "-createdAt");
-
-        const products = await mongooseQuery;
-
-        res.status(200).json({
-            status: "success",
-            message:
-                products.length === 0
-                    ? "No products match your filters"
-                    : "Get All Products",
-            currentPage: page,
-            totalPages,
-            results: products.length,
-            data: products,
-        });
+        mongooseQuery = mongooseQuery.sort(sortBy);
+    } else {
+        mongooseQuery = mongooseQuery.sort("-createdAt"); // Default sort
     }
+
+    // 8. Field selection
+    if (req.query.fields) {
+        const fields = req.query.fields.split(",").join(" ");
+        mongooseQuery = mongooseQuery.select(fields);
+    } else {
+        mongooseQuery = mongooseQuery.select("-__v");
+    }
+
+    // 9. Execute the query
+    const products = await mongooseQuery;
+
+    // 10. Count total documents for pagination
+    const totalDocuments = await Product.countDocuments(mongoQuery);
+    const totalPages = Math.ceil(totalDocuments / limit);
+
+    // 11. Send response
+    res.status(200).json({
+        status: "success",
+        message: products.length === 0
+            ? "No products match your filters"
+            : "Products fetched successfully",
+        currentPage: page,
+        totalPages,
+        results: products.length,
+        data: products,
+    });
 });
+
+
+
 
 
 const getproduct = expressAsyncHandler(async (req, res, next) => {
