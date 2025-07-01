@@ -3,6 +3,15 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const paypalRoutes = require("../routes/paypalRoute");
+const mongoose = require("mongoose");
+const cors = require('cors');
+
+
+
+
+
+const app = express();
+app.use(cors());
 
 const errorHandel = require("../middlewares/errorHandel");
 const AppError = require("../utils/AppError");
@@ -10,11 +19,16 @@ const categoryRouter = require("../routes/category");
 const subCategoryRouter = require("../routes/subCategory");
 const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
+
+const paypalRoutes = require ("../routes/paypalRoute");
+
+
 const userRouter = require("../routes/userRoute");
 const qs = require("qs");
 
-const app = express();
-app.use(cors());
+
+
+
 
 app.use(morgan("dev"));
 
