@@ -12,7 +12,7 @@ class ApiFeatures {
 
         // 1. Handle genre -> convert genre name to category ID
         if (this.queryString.genre) {
-            const Category = require('../models/categoryModel'); // Assuming Category model is here
+            const Category = require('../models/category');
             const category = await Category.findOne({ name: this.queryString.genre });
             if (category) {
                 this.queryConditions.category = category._id.toString();
