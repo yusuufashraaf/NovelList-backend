@@ -1,13 +1,12 @@
-const  mongoose = require("mongoose")
-
+const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema({
     title: {
         type: String,
         trim: true,
-        require: true,
+        required: true,
         minlength: [3, "Too Short Product Name"],
-        maxlength: [80, "Too long Product Name"]
+        maxlength: [80, "Too Long Product Name"]
     },
     slug: {
         type: String,
@@ -15,18 +14,18 @@ const productSchema = new mongoose.Schema({
     },
     description: {
         type: String,
-        require: [true, "Description Is Required"],
+        required: [true, "Description Is Required"],
         trim: true,
-        minlength: [20, "Too short Product Description"]
+        minlength: [20, "Too Short Product Description"]
     },
     author: {
         type: String,
-        require: [true, "Author Is Required"],
+        required: [true, "Author Is Required"],
         trim: true
     },
     quantity: {
         type: Number,
-        require: [true, " Quantity For Product Is Requied"],
+        required: [true, "Quantity For Product Is Required"],
     },
     sold: {
         type: Number,
@@ -34,24 +33,28 @@ const productSchema = new mongoose.Schema({
     },
     price: {
         type: Number,
-        require: [true, "Price For product Is Required"],
+        required: [true, "Price For Product Is Required"],
         trim: true,
-        max: [150000, " Too Lang product Price  "]
+        max: [150000, "Too Long Product Price"]
     },
     priceAfterDiscount: {
         type: Number,
     },
     imageCover: {
         type: String,
-        require: [true, "Product Image Cover Is Required"]
+        required: [true, "Product Image Cover Is Required"]
     },
     images: [String],
 
+    pdfLink: {
+        type: String,
+        required: [true, "Product PDF File Is Required"]
+    },
 
     category: {
         type: mongoose.Schema.ObjectId,
         ref: "Category",
-        require: [true, "Product Must Be Long To Category"],
+        required: [true, "Product Must Belong To Category"],
         trim: true
     },
 
@@ -60,12 +63,11 @@ const productSchema = new mongoose.Schema({
         ref: "SubCategory",
         trim: true
     }],
-   
 
     ratingAverage: {
         type: Number,
-        min: [1, "Rating Must be Above Or Equal 1.0"],
-        max: [5, "Rating Must be Below Or Equal 5.5"],
+        min: [1, "Rating Must Be ≥ 1.0"],
+        max: [5, "Rating Must Be ≤ 5.0"],
     },
 
     ratingQuantity: {
@@ -73,13 +75,10 @@ const productSchema = new mongoose.Schema({
         default: 0
     }
 
-}, {timestamps: true})
+}, { timestamps: true });
 
-productSchema.index({ title:1} ,{ unique: true });
-productSchema.index({author:1} ,{ unique: true });
-
+productSchema.index({ title: 1 }, { unique: true });
 
 const Product = mongoose.model("Product", productSchema);
 
-
-module.exports =  Product;
+module.exports = Product;
