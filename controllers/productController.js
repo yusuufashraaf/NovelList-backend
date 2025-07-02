@@ -12,23 +12,25 @@ const cloudinary = require("cloudinary").v2;
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith("image")) {
+    if (file.mimetype.startsWith("image") || file.mimetype === "application/pdf") {
         cb(null, true);
     } else {
-        cb(new AppError(400,"Not an image! Please upload only images."));
+        cb(new AppError(400, "Please upload only images or PDF files."));
     }
 };
+
 
 const upload = multer({
     storage: multerStorage,
     fileFilter: multerFilter,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
-
-const uploadProductImages = upload.fields([
+const uploadProductFiles = upload.fields([
     { name: "imageCover", maxCount: 1 },
     { name: "images", maxCount: 5 },
+    { name: "pdfFile", maxCount: 1 }  
 ]);
+
 
 // --- NEW: Middleware to upload images to Cloudinary ---
 const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
@@ -43,6 +45,17 @@ const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
         );
         req.body.imageCover = result.secure_url; 
     }
+
+    if (req.files.pdfFile) {
+    const result = await cloudinary.uploader.upload(
+        `data:${req.files.pdfFile[0].mimetype};base64,${req.files.pdfFile[0].buffer.toString('base64')}`,
+        {
+            folder: "products", 
+            resource_type: "raw", // مهم عشان يقبل PDF
+        }
+    );
+    req.body.pdfLink = result.secure_url;  
+}
 
     // 2. Upload images (array of images) to Cloudinary
     if (req.files.images) {
@@ -352,6 +365,6 @@ module.exports = {
     deleteProduct,
     getUniqueGenres,
     getUniqueAuthors,
-    uploadProductImages,
+    uploadProductFiles,
     uploadImagesToCloudinary,
 };

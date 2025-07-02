@@ -7,7 +7,7 @@ const {
   deleteProduct,
   getUniqueGenres,
   getUniqueAuthors,
-  uploadProductImages,
+  uploadProductFiles,
   uploadImagesToCloudinary,
 } = require("../controllers/productController");
 
@@ -23,7 +23,7 @@ const productRouter = Router();
 productRouter
   .route("/")
   .get(getAllProducts)
-  .post(uploadProductImages,uploadImagesToCloudinary,addProductValidator, addproduct);
+  .post(uploadProductFiles,uploadImagesToCloudinary,addProductValidator, addproduct);
 
 productRouter.get("/genres", getUniqueGenres);
 productRouter.get("/authors", getUniqueAuthors);
@@ -31,7 +31,7 @@ productRouter.get("/authors", getUniqueAuthors);
 productRouter
   .route("/:id")
   .get(getProductValidator, getproduct)
-  .patch(uploadProductImages,uploadImagesToCloudinary,updateProductValidator, UpdateProduct)
+  .patch(uploadProductFiles,uploadImagesToCloudinary,updateProductValidator, UpdateProduct)
   .delete(deleteProductValidator, deleteProduct);
 
 module.exports = productRouter;

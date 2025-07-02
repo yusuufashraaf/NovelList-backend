@@ -47,6 +47,10 @@ const productSchema = new mongoose.Schema({
     },
     images: [String],
 
+    pdfFile: {
+        type: String,
+        require: [true, "Product PDF File Is Required"]
+    },
 
     category: {
         type: mongoose.Schema.ObjectId,

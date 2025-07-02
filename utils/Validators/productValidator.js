@@ -135,6 +135,9 @@ const addProductValidator = [
     .optional()
     .isNumeric()
     .withMessage("ratingsQuantity must be a number"),
+  check("pdfFile")
+    .notEmpty()
+    .withMessage("Book pdfFile is required"),
 
   validateMongoId,
 ];
