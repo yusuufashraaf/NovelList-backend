@@ -15,7 +15,6 @@ const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
 const cartRouter = require("../routes/cart");
 const wishlistRouter = require("../routes/wishlist");
-
 const userRouter = require("../routes/userRoute");
 
 const app = express();
