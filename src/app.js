@@ -15,7 +15,7 @@ const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
 const cartRouter = require("../routes/cart");
 const wishlistRouter = require("../routes/wishlist");
-
+const commentRouter= require("../routes/commentRoute")
 const userRouter = require("../routes/userRoute");
 
 const app = express();
@@ -45,6 +45,9 @@ cloudinary.config({
 
 //paypal
 app.use("/buy", paypalRoutes);
+
+// comment
+app.use("/comment",commentRouter);
 
 // 404 handler
 app.use((req, res, next) => {
