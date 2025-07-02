@@ -135,9 +135,7 @@ const addProductValidator = [
     .optional()
     .isNumeric()
     .withMessage("ratingsQuantity must be a number"),
-  check("pdfFile")
-    .notEmpty()
-    .withMessage("Book pdfFile is required"),
+ 
 
   validateMongoId,
 ];
@@ -156,6 +154,8 @@ const deleteProductValidator = [
   check("id").isMongoId().withMessage("Invalid Product Id format"),
   validateMongoId,
 ];
+
+
 
 
 module.exports= {
