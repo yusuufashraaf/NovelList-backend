@@ -31,7 +31,7 @@ productRouter.get("/authors", getUniqueAuthors);
 productRouter
   .route("/:id")
   .get(getProductValidator, getproduct)
-  .patch(updateProductValidator, UpdateProduct)
+  .patch(uploadProductImages,uploadImagesToCloudinary,updateProductValidator, UpdateProduct)
   .delete(deleteProductValidator, deleteProduct);
 
 module.exports = productRouter;

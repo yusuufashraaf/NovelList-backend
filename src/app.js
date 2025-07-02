@@ -3,7 +3,6 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const qs = require("qs");
-const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
 
 const paypalRoutes = require("../routes/paypalRoute");
@@ -15,7 +14,7 @@ const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
 const cartRouter = require("../routes/cart");
 const wishlistRouter = require("../routes/wishlist");
-const commentRouter= require("../routes/commentRoute")
+const commentRouter= require("../routes/commentRoute");
 const userRouter = require("../routes/userRoute");
 
 const app = express();
