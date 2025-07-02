@@ -3,7 +3,6 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const qs = require("qs");
-const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
 
 const paypalRoutes = require("../routes/paypalRoute");
