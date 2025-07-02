@@ -31,8 +31,8 @@ productRouter
         uploadProductFiles,
         manualPdfFileValidator,
         manualImageCoverValidator,
-        uploadImagesToCloudinary,
         addProductValidator,
+        uploadImagesToCloudinary,
         addproduct);
 
 productRouter.get("/genres", getUniqueGenres);
