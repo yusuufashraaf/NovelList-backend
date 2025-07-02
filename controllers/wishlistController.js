@@ -75,13 +75,14 @@ const getWishlist = expressAsyncHandler(async (req, res, next) => {
         author: item.author,
         image: item.imageCover,
       })),
+      totalQuantity: wishlist.totalQuantity,
     },
   });
 });
 
 // Remove item from wishlist
 const removeFromWishlist = expressAsyncHandler(async (req, res, next) => {
-  const { productId } = req.params;
+  const { productId } = req.body;
   //   const userId = req.user.id;
   const userId = "686304a6b8fa343b7fd6e3b9";
 
@@ -91,13 +92,29 @@ const removeFromWishlist = expressAsyncHandler(async (req, res, next) => {
   }
 
   const itemToRemove = wishlist.wishlistItems.find(
-    (item) => item.toString() === productId
+    (item) => item._id.toString() === productId
   );
+  //   console.log("productId:", productId, typeof productId);
+  //   console.log(itemToRemove);
+
+  if (!itemToRemove) {
+    return next(new AppError(404, "Item not found in wishlist"));
+  }
 
   if (itemToRemove) {
     wishlist.wishlistItems = wishlist.wishlistItems.filter(
-      (item) => item.toString() !== productId
+      (item) => item._id.toString() !== productId
     );
+
+    // if the wishlist is empty, delete the wishlist
+    if (wishlist.wishlistItems.length === 0) {
+      await Wishlist.findByIdAndDelete(wishlist._id);
+      return res.status(200).json({
+        status: "success",
+        message: "Wishlist deleted successfully",
+      });
+    }
+
     wishlist.totalQuantity -= 1;
     await wishlist.save();
   }
