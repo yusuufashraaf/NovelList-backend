@@ -35,6 +35,7 @@ app.use(express.json());
 
 // Routes
 app.use("/api/v1/users", require("../routes/userRoute"));
+app.use("/api/v1/auth", require("../routes/authRoute"));
 
 app.use("/api/v1/categories",categoryRouter);
 app.use("/api/v1/subCategories",subCategoryRouter);
