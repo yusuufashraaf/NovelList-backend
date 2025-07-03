@@ -48,6 +48,7 @@ const getAllBrands = expressAsyncHandler( async (req,res,next)=>{
     res.status(200).json({
         status:"Success",
         message:"Get All Brands",
+        result : brand.length,
         data : brand
     })
 })  

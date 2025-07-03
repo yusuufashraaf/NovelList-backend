@@ -1,21 +1,17 @@
-import fs  from 'fs';
-import dotenv from 'dotenv';
-import Product from '../../Models/product.js';
-import connectDB from '../../DataBase/connectDB.js';
-import colors from 'colors';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-dotenv.config();
-connectDB();
+const fs = require('fs');
+const path = require('path');
+const dotenv = require('dotenv');
+const Product = require('../../models/product');
+const dbConnection = require('../../config/connectDB');
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
+dbConnection();
 
 const filePath = path.join(__dirname, 'product.json');
-const products = JSON.parse(fs.readFileSync(filePath));
+const products = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
 
-// Insert data into DB
 const insertData = async () => {
   try {
     await Product.create(products);
@@ -23,10 +19,10 @@ const insertData = async () => {
     process.exit();
   } catch (error) {
     console.log(error);
+    process.exit(1);
   }
 };
 
-// Delete data from DB
 const destroyData = async () => {
   try {
     await Product.deleteMany();
@@ -34,10 +30,10 @@ const destroyData = async () => {
     process.exit();
   } catch (error) {
     console.log(error);
+    process.exit(1);
   }
 };
 
-// node seeder.js -d
 if (process.argv[2] === '-i') {
   insertData();
 } else if (process.argv[2] === '-d') {
