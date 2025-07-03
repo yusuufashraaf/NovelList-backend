@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/userAuthModel");
@@ -24,7 +25,7 @@ exports.signup = async (req, res, next) => {
             user
         }
     });
-}
+};
 
 // @desc login validator
 // @route POST /api/v1/auth/login
@@ -66,7 +67,7 @@ exports.login = async (req, res, next) => {
             user
         }
     });
-}
+};
 
 //This is for authentication
 exports.protect = async (req, res, next) => {
@@ -107,7 +108,17 @@ exports.protect = async (req, res, next) => {
         }
 
         req.user = currentUser;
-        next();
+        return res.status(200).json({
+            status: "success",
+            data: {
+                user: {
+                    id: currentUser._id,
+                    name: currentUser.name,
+                    email: currentUser.email,
+                    role: currentUser.role
+                }
+            }
+        });
     } catch (err) {
         return res.status(401).json({
             status: "fail",
@@ -129,4 +140,25 @@ exports.allowedTo = (...roles) => {
         }
         next();
     };
-}
+};
+
+exports.forgetPassword = async (req, res, next) => {
+    //1-> get user based on POSTed email
+    const user = await User.findOne({ email: req.body.email });
+    if (!user) {
+        return res.status(404).json({
+            status: "fail",
+            message: `There is no user with this email address ${req.body.email}`
+        });
+    }
+    //2-> generate the random reset code (6 digits) if user exist and save it in database after hash
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const hashResetCode = crypto.createHash("sha256").update(resetCode).digest("hex");
+    await user.save({ validateBeforeSave: false });
+    //3-> send it to user's email
+    //4-> send response
+    res.status(200).json({
+        status: "success",
+        message: "Token sent to email!"
+    });
+};
