@@ -75,13 +75,14 @@ const getWishlist = expressAsyncHandler(async (req, res, next) => {
         author: item.author,
         image: item.imageCover,
       })),
+      totalQuantity: wishlist.totalQuantity,
     },
   });
 });
 
 // Remove item from wishlist
 const removeFromWishlist = expressAsyncHandler(async (req, res, next) => {
-  const { productId } = req.params;
+  const { productId } = req.body;
   //   const userId = req.user.id;
   const userId = "686304a6b8fa343b7fd6e3b9";
 
@@ -90,18 +91,24 @@ const removeFromWishlist = expressAsyncHandler(async (req, res, next) => {
     return next(new AppError(404, "Wishlist not found"));
   }
 
-  const itemToRemove = wishlist.wishlistItems.find(
+  // Check if the item exists in the wishlist before removal
+  const itemExists = wishlist.wishlistItems.some(
     (item) => item.toString() === productId
   );
 
-  if (itemToRemove) {
-    wishlist.wishlistItems = wishlist.wishlistItems.filter(
-      (item) => item.toString() !== productId
-    );
-    wishlist.totalQuantity -= 1;
-    await wishlist.save();
+  if (!itemExists) {
+    return next(new AppError(404, "Item not found in wishlist"));
   }
 
+  // Remove the item from wishlist
+  wishlist.wishlistItems = wishlist.wishlistItems.filter(
+    (item) => item.toString() !== productId
+  );
+
+  // Save the wishlist (totalQuantity will be automatically updated by pre-save middleware)
+  await wishlist.save();
+
+  // Populate product details
   await wishlist.populate({
     path: "wishlistItems",
     select: "title imageCover author",
