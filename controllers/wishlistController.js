@@ -114,8 +114,6 @@ const removeFromWishlist = expressAsyncHandler(async (req, res, next) => {
         message: "Wishlist deleted successfully",
       });
     }
-
-    wishlist.totalQuantity -= 1;
     await wishlist.save();
   }
 
