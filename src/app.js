@@ -28,19 +28,12 @@ app.set("query parser", (str) => qs.parse(str));
 app.use(express.json());
 
 // Routes
-app.use("/api/v1/users", userRouter);
-app.use("/api/v1/categories", categoryRouter);
-app.use("/api/v1/subCategories", subCategoryRouter);
-app.use("/api/v1/brands", brandRouter);
-app.use("/api/v1/products", productRouter);
-app.use("/api/v1/cart", cartRouter);
-app.use("/api/v1/wishlist", wishlistRouter);
-
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-});
+app.use("/api/v1/users", require("../routes/userRoute"));
+app.use("/api/v1/auth", require("../routes/authRoute"));
+app.use("/api/v1/categories",categoryRouter);
+app.use("/api/v1/subCategories",subCategoryRouter);
+app.use("/api/v1/brands",brandRouter);
+app.use("/api/v1/products",productRouter);
 
 //paypal
 app.use("/buy", paypalRoutes);
