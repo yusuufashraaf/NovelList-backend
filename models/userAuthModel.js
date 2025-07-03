@@ -28,7 +28,10 @@ const userAuthSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
-    passwordChangedAt: Date // ✅ ADD THIS LINE
+    passwordChangedAt: Date,
+    passwordResetCode: String,
+    passwordResetExpires: Date,
+    passwordResetVerified: Boolean
 }, {
     timestamps: true,
 });

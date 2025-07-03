@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const sendEmail = require("../utils/sendEmail");
 const User = require("../models/userAuthModel");
 
 // @desc signup validator
@@ -108,17 +109,7 @@ exports.protect = async (req, res, next) => {
         }
 
         req.user = currentUser;
-        return res.status(200).json({
-            status: "success",
-            data: {
-                user: {
-                    id: currentUser._id,
-                    name: currentUser.name,
-                    email: currentUser.email,
-                    role: currentUser.role
-                }
-            }
-        });
+        next();
     } catch (err) {
         return res.status(401).json({
             status: "fail",
@@ -126,6 +117,19 @@ exports.protect = async (req, res, next) => {
             error: err.message
         });
     }
+};
+
+exports.getMe = (req, res) => {
+    res.status(200).json({
+        status: "success",
+        data: {
+            user: {
+                name: req.user.name,
+                email: req.user.email,
+                role: req.user.role
+            }
+        }
+    });
 };
 
 //This is for authorization
@@ -142,7 +146,10 @@ exports.allowedTo = (...roles) => {
     };
 };
 
-exports.forgetPassword = async (req, res, next) => {
+// @desc Forget Password
+// @route POST /api/v1/auth/forgotPassword
+// @access Public
+exports.forgotPassword = async (req, res, next) => {
     //1-> get user based on POSTed email
     const user = await User.findOne({ email: req.body.email });
     if (!user) {
@@ -154,11 +161,31 @@ exports.forgetPassword = async (req, res, next) => {
     //2-> generate the random reset code (6 digits) if user exist and save it in database after hash
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
     const hashResetCode = crypto.createHash("sha256").update(resetCode).digest("hex");
-    await user.save({ validateBeforeSave: false });
+    user.passwordResetCode = hashResetCode;
+    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; //10 minutes
+    user.passwordResetVerified = false;
+    await user.save();
     //3-> send it to user's email
+    try {
+        const resetURL = `${req.protocol}://${req.get("host")}/api/v1/auth/resetPassword/${resetCode}`;
+        await sendEmail({
+            email: user.email,
+            subject: "Your password reset token (valid for 10 minutes)",
+            message: `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`
+        });
+    } catch (err) {
+        user.passwordResetCode = undefined;
+        user.passwordResetExpires = undefined;
+        user.passwordResetVerified = undefined;
+        await user.save();
+        return res.status(500).json({
+            status: "fail",
+            message: "There was an error sending the email. Try again later!"
+        });
+    }
     //4-> send response
     res.status(200).json({
         status: "success",
-        message: "Token sent to email!"
+        message: "Reset code sent to email!"
     });
 };
