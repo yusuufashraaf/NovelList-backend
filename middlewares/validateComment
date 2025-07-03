@@ -1,7 +1,7 @@
 
 const mongoose = require('mongoose');
 function validateComment(req, res, next) {
-  const { userId, bookId, comment } = req.body;
+  const { userId, bookId, comment,review } = req.body;
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     return res.status(400).json({ error: 'Invalid or missing userId' });
@@ -14,6 +14,13 @@ function validateComment(req, res, next) {
   if (typeof comment !== 'string' || comment.trim().length < 1) {
     return res.status(400).json({ error: 'Comment must be a non-empty string' });
   }
+
+  if (review !== undefined) {
+      if (typeof review !== 'number' || review < 1 || review > 5) {
+        return res.status(400).json({ error: 'Review must be a number between 1 and 5' });
+      }
+    }
+
 
   next();
 }
