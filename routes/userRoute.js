@@ -16,6 +16,7 @@ const { changePasswordValidator } = require("../middlewares/userValidator");
 const validateMongoId = require("../middlewares/validatorMiddleware");
 const { protect } = require("../controllers/authController");
 const {allowedTo} = require("../controllers/authController");
+const { getMe } = require("../controllers/authController");
 const router = express.Router();
 
 router
@@ -23,12 +24,15 @@ router
 
 router
   .route("/")
-  .get(protect, getAllUsers)
+  .get(getAllUsers)
   .post(createUserValidator, validateMongoId, createUser);
 
 // router
 //   .route("/login")
 //   .post(loginUserValidator, validateMongoId, loginUser);
+
+router
+  .get('/me', protect, getMe);
 
 router
   .route("/:id")
