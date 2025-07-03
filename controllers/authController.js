@@ -42,7 +42,7 @@ exports.login = async (req, res, next) => {
     }
     //2-> check if user exist
     const user = await User.findOne({ email }).select("+password");
-    if (!user) {
+    if (!user || !user.active) {
         return res.status(401).json({
             status: "fail",
             message: "Invalid email or password"
@@ -150,42 +150,196 @@ exports.allowedTo = (...roles) => {
 // @route POST /api/v1/auth/forgotPassword
 // @access Public
 exports.forgotPassword = async (req, res, next) => {
-    //1-> get user based on POSTed email
-    const user = await User.findOne({ email: req.body.email });
-    if (!user) {
-        return res.status(404).json({
-            status: "fail",
-            message: `There is no user with this email address ${req.body.email}`
-        });
-    }
-    //2-> generate the random reset code (6 digits) if user exist and save it in database after hash
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const hashResetCode = crypto.createHash("sha256").update(resetCode).digest("hex");
-    user.passwordResetCode = hashResetCode;
-    user.passwordResetExpires = Date.now() + 10 * 60 * 1000; //10 minutes
-    user.passwordResetVerified = false;
-    await user.save();
-    //3-> send it to user's email
     try {
+        // 1. Find user by email
+        const user = await User.findOne({ email: req.body.email });
+        if (!user) {
+            return res.status(404).json({
+                status: "fail",
+                message: `There is no user with this email address ${req.body.email}`,
+            });
+        }
+
+        // 2. Cooldown check: must wait 1 minute between sending emails
+        const ONE_MINUTE = 60 * 1000;
+        const now = Date.now();
+
+        if (user.lastEmailSentAt && now - user.lastEmailSentAt.getTime() < ONE_MINUTE) {
+            return res.status(429).json({
+                status: "fail",
+                message: "You must wait 1 minute before requesting another password reset email.",
+            });
+        }
+
+        // 3. Generate 6-digit reset code & hash it
+        const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const hashResetCode = crypto.createHash("sha256").update(resetCode).digest("hex");
+
+        // 4. Save hashed reset code, expiration, and reset verification flag
+        user.passwordResetCode = hashResetCode;
+        user.passwordResetExpires = Date.now() + 10 * 60 * 1000; // expires in 10 minutes
+        user.passwordResetVerified = false;
+        await user.save();
+
+        // 5. Send reset code email
         const resetURL = `${req.protocol}://${req.get("host")}/api/v1/auth/resetPassword/${resetCode}`;
         await sendEmail({
             email: user.email,
             subject: "Your password reset token (valid for 10 minutes)",
-            message: `Forgot your password? Submit a PATCH request with your new password and passwordConfirm to: ${resetURL}.\nIf you didn't forget your password, please ignore this email!`
+            message: `Forgot your password? Use this reset code: ${resetCode}\n\nOr reset your password here: ${resetURL}\n\nIf you didn't forget your password, please ignore this email!`,
+        });
+
+        // 6. Save timestamp of last successful email sent
+        user.lastEmailSentAt = new Date();
+        await user.save();
+
+        // 7. Send success response
+        res.status(200).json({
+            status: "success",
+            message: "Reset code sent to email!",
         });
     } catch (err) {
-        user.passwordResetCode = undefined;
-        user.passwordResetExpires = undefined;
-        user.passwordResetVerified = undefined;
-        await user.save();
-        return res.status(500).json({
+        // Rollback on error
+        if (user) {
+            user.passwordResetCode = undefined;
+            user.passwordResetExpires = undefined;
+            user.passwordResetVerified = undefined;
+            await user.save();
+        }
+
+        res.status(500).json({
             status: "fail",
-            message: "There was an error sending the email. Try again later!"
+            message: "There was an error sending the email. Try again later!",
+            error: err.message,
         });
     }
-    //4-> send response
+};
+
+// @desc Verify Password Reset Code
+// @route PATCH /api/v1/auth/verifyPasswordResetCode
+// @access Public
+exports.verifyPasswordResetCode = async (req, res, next) => {
+    try {
+        const { email, resetCode } = req.body;
+
+        if (!email || !resetCode) {
+            return res.status(400).json({
+                status: "fail",
+                message: "Email and reset code are required",
+            });
+        }
+
+        const now = Date.now();
+        const ONE_MINUTE = 60 * 1000;
+
+        // Hash provided reset code
+        const hashResetCode = crypto.createHash("sha256").update(resetCode).digest("hex");
+
+        // Find user by email and matching reset code that is not expired
+        const user = await User.findOne({
+            email: email.toLowerCase(),
+            passwordResetCode: hashResetCode,
+            passwordResetExpires: { $gt: now },
+        });
+
+        // If no user found, handle failed attempt cooldown per email
+        if (!user) {
+            // Find user by email to track failed attempts
+            const anyUser = await User.findOne({ email: email.toLowerCase() });
+            if (anyUser) {
+                const lastAttempt = anyUser.lastPasswordResetVerifyAttempt
+                    ? anyUser.lastPasswordResetVerifyAttempt.getTime()
+                    : 0;
+
+                if (now - lastAttempt < ONE_MINUTE) {
+                    const waitTime = Math.ceil((ONE_MINUTE - (now - lastAttempt)) / 1000);
+                    return res.status(429).json({
+                        status: "fail",
+                        message: `Please wait ${waitTime} seconds before trying again.`,
+                    });
+                }
+
+                // Save last attempt timestamp on failed try
+                anyUser.lastPasswordResetVerifyAttempt = new Date();
+                await anyUser.save();
+            }
+
+            return res.status(400).json({
+                status: "fail",
+                message: "Invalid or expired password reset code",
+            });
+        }
+
+        // Check cooldown on repeated attempts even if code is valid
+        const lastAttempt = user.lastPasswordResetVerifyAttempt
+            ? user.lastPasswordResetVerifyAttempt.getTime()
+            : 0;
+
+        if (now - lastAttempt < ONE_MINUTE) {
+            const waitTime = Math.ceil((ONE_MINUTE - (now - lastAttempt)) / 1000);
+            return res.status(429).json({
+                status: "fail",
+                message: `Please wait ${waitTime} seconds before trying again.`,
+            });
+        }
+
+        // If all good, mark code as verified and save attempt timestamp
+        user.passwordResetVerified = true;
+        user.lastPasswordResetVerifyAttempt = new Date();
+        await user.save();
+
+        res.status(200).json({
+            status: "success",
+            message: "Reset code verified successfully",
+        });
+    } catch (err) {
+        res.status(500).json({
+            status: "error",
+            message: "Internal Server Error",
+            error: err.message,
+        });
+    }
+};
+
+// @desc Reset Password
+// @route PATCH /api/v1/auth/resetPassword
+// @access Public
+exports.resetPassword = async (req, res, next) => {
+    const user = await User.findOne({
+        passwordResetVerified: true,
+        passwordResetExpires: { $gt: Date.now() },
+    });
+
+    if (!user || !user.passwordResetVerified) {
+        return res.status(400).json({
+            status: "fail",
+            message: "Invalid or expired password reset code",
+        });
+    }
+
+    user.password = req.body.password;
+    user.passwordResetCode = undefined;
+    user.passwordResetExpires = undefined;
+    user.passwordResetVerified = undefined;
+    await user.save();
+
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRES_IN,
+    });
+
     res.status(200).json({
         status: "success",
-        message: "Reset code sent to email!"
+        token,
+        data: {
+            user,
+        },
     });
+};
+
+exports.logout = (req, res) => {
+  // No need to do anything server-side for stateless JWT logout
+  res.status(200).json({
+    status: "success",
+    message: "Logged out successfully"
+  });
 };

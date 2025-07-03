@@ -8,6 +8,7 @@ const {
   deleteUser,
   changePassword,
   loginUser,
+  deactivateUser
 } = require("../controllers/userController");
 
 const { createUserValidator } = require("../middlewares/userValidator");
@@ -39,5 +40,9 @@ router
   .get(protect, getUserById)
   .patch(protect, updateUser)
   .delete(protect, allowedTo("admin"), deleteUser);
+
+router
+  .route("/deactivate/:id")
+  .patch(protect, deactivateUser);
 
 module.exports = router;
