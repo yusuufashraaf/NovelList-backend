@@ -68,6 +68,7 @@ exports.login = async (req, res, next) => {
     });
 }
 
+//This is for authentication
 exports.protect = async (req, res, next) => {
     let token;
     if (
@@ -115,3 +116,17 @@ exports.protect = async (req, res, next) => {
         });
     }
 };
+
+//This is for authorization
+exports.allowedTo = (...roles) => {
+    return (req, res, next) => {
+        //Check if user role is allowed
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({
+                status: "fail",
+                message: "You do not have permission to perform this action"
+            });
+        }
+        next();
+    };
+}
