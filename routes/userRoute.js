@@ -15,6 +15,7 @@ const { loginUserValidator } = require("../middlewares/userValidator");
 const { changePasswordValidator } = require("../middlewares/userValidator");  
 const validateMongoId = require("../middlewares/validatorMiddleware");
 const { protect } = require("../controllers/authController");
+const {allowedTo} = require("../controllers/authController");
 const router = express.Router();
 
 router
@@ -31,8 +32,8 @@ router
 
 router
   .route("/:id")
-  .get(protect, getUserById)
-  .patch(protect, updateUser)
-  .delete(protect, deleteUser);
+  .get(protect, allowedTo("admin"), getUserById)
+  .patch(protect, allowedTo("admin"), updateUser)
+  .delete(protect, allowedTo("admin"), deleteUser);
 
 module.exports = router;
