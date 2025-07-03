@@ -41,15 +41,25 @@ exports.createUser = async (req, res) => {
 //route: /api/v1/users/:id method: patch
 exports.updateUser = async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(req.params.id,
-            {
-                name: req.body.name,
-                email: req.body.email,
-                role: req.body.role
-            },
-            {
-                new: true,
-            });
+        const { name, email, role } = req.body;
+        const userId = req.params.id;
+
+        // 1. Check if email is being updated
+        if (email) {
+            const existingUser = await User.findOne({ email });
+
+            // 2. Check if email is already used by another user
+            if (existingUser && existingUser._id.toString() !== userId) {
+                return res.status(400).json({ error: "Already exists" });
+            }
+        }
+
+        // 3. Proceed with update
+        const user = await User.findByIdAndUpdate(
+            userId,
+            { name, email, role },
+            { new: true, runValidators: true }
+        );
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }

@@ -32,8 +32,8 @@ router
 
 router
   .route("/:id")
-  .get(protect, allowedTo("admin"), getUserById)
-  .patch(protect, allowedTo("admin"), updateUser)
+  .get(protect, getUserById)
+  .patch(protect, updateUser)
   .delete(protect, allowedTo("admin"), deleteUser);
 
 module.exports = router;
