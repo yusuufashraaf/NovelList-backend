@@ -17,6 +17,7 @@ const userAuthSchema = new mongoose.Schema({
         type: String,
         required: [true, "Password is required"],
         minlength: [6, "Password must be at least 6 characters"],
+        select: false // to prevent returning password in queries by default
     },
     role: {
         type: String,
@@ -27,21 +28,42 @@ const userAuthSchema = new mongoose.Schema({
         type: Boolean,
         default: true,
     },
-}
-    , {
-        timestamps: true,
-    });
+    passwordChangedAt: Date,
+    passwordResetCode: String,
+    passwordResetExpires: Date,
+    passwordResetVerified: Boolean,
+    lastEmailSentAt: Date,
+    lastPasswordResetVerifyAttempt: Date
+}, {
+    timestamps: true,
+});
 
-    userAuthSchema.pre("save", async function (next) {
-        // Only run this function if password was actually modified
-        if (!this.isModified("password")) return next();
-        // Hashing user password
-        this.password = await bcrypt.hash(this.password, 12);
-        next();
-    });
+// Hash password before saving if it's modified
+userAuthSchema.pre("save", async function (next) {
+    if (!this.isModified("password")) return next();
 
-    userAuthSchema.methods.matchPassword = async function (enteredPassword) {
-        return await bcrypt.compare(enteredPassword, this.password);
-    };
+    this.password = await bcrypt.hash(this.password, 12);
+
+    // Set passwordChangedAt only if not a new document
+    if (!this.isNew) {
+        this.passwordChangedAt = Date.now() - 1000;
+    }
+
+    next();
+});
+
+// Compare entered password with hashed one
+userAuthSchema.methods.matchPassword = async function (enteredPassword) {
+    return await bcrypt.compare(enteredPassword, this.password);
+};
+
+// Check if password was changed after the token was issued
+userAuthSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
+    if (this.passwordChangedAt) {
+        const changedTimestamp = parseInt(this.passwordChangedAt.getTime() / 1000, 10);
+        return changedTimestamp > JWTTimestamp;
+    }
+    return false;
+};
 
 module.exports = mongoose.model("UserAuth", userAuthSchema);
