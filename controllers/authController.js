@@ -335,3 +335,11 @@ exports.resetPassword = async (req, res, next) => {
         },
     });
 };
+
+exports.logout = (req, res) => {
+  // No need to do anything server-side for stateless JWT logout
+  res.status(200).json({
+    status: "success",
+    message: "Logged out successfully"
+  });
+};
