@@ -135,6 +135,7 @@ const addProductValidator = [
     .optional()
     .isNumeric()
     .withMessage("ratingsQuantity must be a number"),
+ 
 
   validateMongoId,
 ];
@@ -153,6 +154,8 @@ const deleteProductValidator = [
   check("id").isMongoId().withMessage("Invalid Product Id format"),
   validateMongoId,
 ];
+
+
 
 
 module.exports= {

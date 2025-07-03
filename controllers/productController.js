@@ -12,41 +12,55 @@ const cloudinary = require("cloudinary").v2;
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith("image")) {
+    if (file.mimetype.startsWith("image") || file.mimetype === "application/pdf") {
         cb(null, true);
     } else {
-        cb(new AppError(400,"Not an image! Please upload only images."));
+        cb(new AppError(400, "Please upload only images or PDF files."));
     }
 };
+
 
 const upload = multer({
     storage: multerStorage,
     fileFilter: multerFilter,
     limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
-
-const uploadProductImages = upload.fields([
+const uploadProductFiles = upload.fields([
     { name: "imageCover", maxCount: 1 },
     { name: "images", maxCount: 5 },
+    { name: "pdfLink", maxCount: 1 }
 ]);
 
-// --- NEW: Middleware to upload images to Cloudinary ---
+
 const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
     // 1. Upload imageCover to Cloudinary
     if (req.files.imageCover) {
         const result = await cloudinary.uploader.upload(
             `data:${req.files.imageCover[0].mimetype};base64,${req.files.imageCover[0].buffer.toString('base64')}`,
             {
-                folder: "products", 
+                folder: "products",
                 // transformation: [{ width: 600, height: 600, crop: "limit" }]
             }
         );
-        req.body.imageCover = result.secure_url; 
+        req.body.imageCover = result.secure_url;
+    }
+
+    if (req.files.pdfLink) {
+        const pdfLink = req.files.pdfLink[0];
+        const result = await cloudinary.uploader.upload(
+            `data:${pdfLink.mimetype};base64,${pdfLink.buffer.toString('base64')}`,
+            {
+                folder: "products",
+                resource_type: "raw",
+                public_id: `products/${Date.now()}-${pdfLink.originalname.replace(/\.[^/.]+$/, "")}.pdf`,
+            }
+        );
+        req.body.pdfLink = result.secure_url;
     }
 
     // 2. Upload images (array of images) to Cloudinary
     if (req.files.images) {
-        req.body.images = []; 
+        req.body.images = [];
         await Promise.all(
             req.files.images.map(async (file) => {
                 const result = await cloudinary.uploader.upload(
@@ -56,12 +70,12 @@ const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
                         // transformation: [{ width: 800, height: 800, crop: "limit" }]
                     }
                 );
-                req.body.images.push(result.secure_url); 
+                req.body.images.push(result.secure_url);
             })
         );
     }
 
-    next(); 
+    next();
 });
 
 
@@ -101,124 +115,7 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
 });
 
 
-// const getAllProducts = expressAsyncHandler(async (req, res, next) => {
-//     const finalQueryConditions = {}; 
 
-//     // 1. Clone the query object and remove control fields
-//     const queryObj = { ...req.query };
-//     const excludedFields = ["page", "sort", "limit", "fields", "keyword"]; // Add 'keyword' to excluded
-//     excludedFields.forEach((field) => delete queryObj[field]);
-
-//     // 2. Handle genre -> convert genre name to category ID
-//     if (queryObj.genre) {
-//         const category = await Category.findOne({ name: queryObj.genre });
-//         if (!category) {
-//             return res.status(200).json({
-//                 status: "success",
-//                 message: "No products found for this genre",
-//                 currentPage: 1,
-//                 totalPages: 0,
-//                 results: 0,
-//                 data: [],
-//             });
-//         }
-//         finalQueryConditions.category = category._id.toString();
-//         delete queryObj.genre; // Already moved to finalQueryConditions
-//     }
-
-//     // 3. Handle rating filter
-//     if (queryObj.rating) {
-//         finalQueryConditions.ratingAverage = { $gte: Number(queryObj.rating) };
-//         delete queryObj.rating; // Already moved to finalQueryConditions
-//     }
-
-//     // 4. Advanced filtering: convert gt/gte/lt/lte
-//     let queryStr = JSON.stringify(queryObj);
-//     queryStr = queryStr.replace(/\b(gt|gte|lt|lte)\b/g, (match) => `$${match}`);
-//     const parsedQueryObj = JSON.parse(queryStr);
-
-//     // Merge parsedQueryObj into finalQueryConditions
-//     Object.assign(finalQueryConditions, parsedQueryObj);
-
-
-//     // 9-search by title and author (YOUR REVISED CODE HERE)
-//     if (req.query.keyword) {
-//         const keyword = req.query.keyword;
-//         const keywordSearchConditions = []; // Conditions specific to keyword search
-
-//         // 1. Search for the entire keyword phrase (case-insensitive)
-//         keywordSearchConditions.push(
-//             { title: { $regex: keyword, $options: "i" } },
-//             { author: { $regex: keyword, $options: "i" } }
-//         );
-
-//         // 2. Split the keyword into individual words and search for each word
-//         const words = keyword.split(/\s+/).filter(Boolean);
-//         if (words.length > 1) {
-//             words.forEach(word => {
-//                 keywordSearchConditions.push(
-//                     { title: { $regex: word, $options: "i" } },
-//                     { author: { $regex: word, $options: "i" } }
-//                 );
-//             });
-//         }
-
-//         // Add the keyword search conditions to the final query using $and with $or
-//         // This ensures that if other filters exist, they are ANDed with the keyword search.
-//         if (keywordSearchConditions.length > 0) {
-//             finalQueryConditions.$and = finalQueryConditions.$and || [];
-//             finalQueryConditions.$and.push({ $or: keywordSearchConditions });
-//         }
-//     }
-
-//     // 5. Pagination setup
-//     const page = Number(req.query.page) || 1;
-//     const limit = Number(req.query.limit) || 8;
-//     const skip = (page - 1) * limit;
-
-//     // 6. Build the mongoose query with all combined conditions
-//     let mongooseQuery = Product.find(finalQueryConditions) // <--- Use the combined conditions here
-//         .skip(skip)
-//         .limit(limit)
-//         .populate({ path: "category", select: "name -_id" });
-
-//     // 7. Sorting
-//     if (req.query.sort) {
-//         const sortBy = req.query.sort.split(",").join(" ");
-//         mongooseQuery = mongooseQuery.sort(sortBy);
-//     } else {
-//         mongooseQuery = mongooseQuery.sort("-createdAt"); // Default sort
-//     }
-
-//     // 8. Field selection
-//     if (req.query.fields) {
-//         const fields = req.query.fields.split(",").join(" ");
-//         mongooseQuery = mongooseQuery.select(fields);
-//     } else {
-//         mongooseQuery = mongooseQuery.select("-__v");
-//     }
-
-//     // 10. Execute the query
-//     const products = await mongooseQuery;
-
-//     // 11. Count total documents for pagination
-//     // Count based on the same finalQueryConditions
-//     const totalDocuments = await Product.countDocuments(finalQueryConditions);
-//     const totalPages = Math.ceil(totalDocuments / limit);
-
-//     // 12. Send response
-//     res.status(200).json({
-//         status: "success",
-//         message:
-//             products.length === 0
-//                 ? "No products match your filters"
-//                 : "Products fetched successfully",
-//         currentPage: page,
-//         totalPages,
-//         results: products.length,
-//         data: products,
-//     });
-// });
 
 
 
@@ -277,7 +174,7 @@ const getproduct = expressAsyncHandler(async (req, res, next) => {
 
     res.status(200).json({
         status: "Success",
-        message: "Get Single Brand",
+        message: "Get Single Product Successfully",
         data: product,
     });
 });
@@ -352,6 +249,6 @@ module.exports = {
     deleteProduct,
     getUniqueGenres,
     getUniqueAuthors,
-    uploadProductImages,
+    uploadProductFiles,
     uploadImagesToCloudinary,
 };

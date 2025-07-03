@@ -91,24 +91,32 @@ const removeFromWishlist = expressAsyncHandler(async (req, res, next) => {
     return next(new AppError(404, "Wishlist not found"));
   }
 
-  // Check if the item exists in the wishlist before removal
-  const itemExists = wishlist.wishlistItems.some(
-    (item) => item.toString() === productId
+  const itemToRemove = wishlist.wishlistItems.find(
+    (item) => item._id.toString() === productId
   );
+  //   console.log("productId:", productId, typeof productId);
+  //   console.log(itemToRemove);
 
-  if (!itemExists) {
+  if (!itemToRemove) {
     return next(new AppError(404, "Item not found in wishlist"));
   }
 
-  // Remove the item from wishlist
-  wishlist.wishlistItems = wishlist.wishlistItems.filter(
-    (item) => item.toString() !== productId
-  );
+  if (itemToRemove) {
+    wishlist.wishlistItems = wishlist.wishlistItems.filter(
+      (item) => item._id.toString() !== productId
+    );
 
-  // Save the wishlist (totalQuantity will be automatically updated by pre-save middleware)
-  await wishlist.save();
+    // if the wishlist is empty, delete the wishlist
+    if (wishlist.wishlistItems.length === 0) {
+      await Wishlist.findByIdAndDelete(wishlist._id);
+      return res.status(200).json({
+        status: "success",
+        message: "Wishlist deleted successfully",
+      });
+    }
+    await wishlist.save();
+  }
 
-  // Populate product details
   await wishlist.populate({
     path: "wishlistItems",
     select: "title imageCover author",

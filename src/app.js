@@ -3,7 +3,6 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const qs = require("qs");
-const mongoose = require("mongoose");
 const cloudinary = require("cloudinary").v2;
 
 const paypalRoutes = require("../routes/paypalRoute");
@@ -15,10 +14,15 @@ const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
 const cartRouter = require("../routes/cart");
 const wishlistRouter = require("../routes/wishlist");
-
+const commentRouter= require("../routes/commentRoute");
 const userRouter = require("../routes/userRoute");
 
+// swagger
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('../swagger.json');
+
 const app = express();
+
 app.use(cors());
 
 app.use(morgan("dev"));
@@ -28,23 +32,22 @@ app.set("query parser", (str) => qs.parse(str));
 // Middleware
 app.use(express.json());
 
-// Routes
-app.use("/api/v1/users", userRouter);
-app.use("/api/v1/categories", categoryRouter);
-app.use("/api/v1/subCategories", subCategoryRouter);
-app.use("/api/v1/brands", brandRouter);
-app.use("/api/v1/products", productRouter);
-app.use("/api/v1/cart", cartRouter);
-app.use("/api/v1/wishlist", wishlistRouter);
 
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET,
-});
+// 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// Routes
+app.use("/api/v1/users", require("../routes/userRoute"));
+app.use("/api/v1/auth", require("../routes/authRoute"));
+app.use("/api/v1/categories",categoryRouter);
+app.use("/api/v1/subCategories",subCategoryRouter);
+app.use("/api/v1/brands",brandRouter);
+app.use("/api/v1/products",productRouter);
 
 //paypal
 app.use("/buy", paypalRoutes);
+
+// comment
+app.use("/api/v1/comment",commentRouter);
 
 // 404 handler
 app.use((req, res, next) => {

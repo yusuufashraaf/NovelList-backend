@@ -7,7 +7,7 @@ const {
   deleteProduct,
   getUniqueGenres,
   getUniqueAuthors,
-  uploadProductImages,
+  uploadProductFiles,
   uploadImagesToCloudinary,
 } = require("../controllers/productController");
 
@@ -17,13 +17,23 @@ const {
   updateProductValidator,
   deleteProductValidator,
 } = require("../utils/Validators/productValidator");
+const {
+  manualPdfFileValidator,
+  manualImageCoverValidator,
+} = require("../middlewares/productImg&FileValidator");
 
 const productRouter = Router();
 
 productRouter
   .route("/")
   .get(getAllProducts)
-  .post(uploadProductImages,uploadImagesToCloudinary,addProductValidator, addproduct);
+  .post(
+        uploadProductFiles,
+        manualPdfFileValidator,
+        manualImageCoverValidator,
+        addProductValidator,
+        uploadImagesToCloudinary,
+        addproduct);
 
 productRouter.get("/genres", getUniqueGenres);
 productRouter.get("/authors", getUniqueAuthors);
@@ -31,7 +41,7 @@ productRouter.get("/authors", getUniqueAuthors);
 productRouter
   .route("/:id")
   .get(getProductValidator, getproduct)
-  .patch(updateProductValidator, UpdateProduct)
+  .put(uploadProductFiles, uploadImagesToCloudinary, updateProductValidator, UpdateProduct)
   .delete(deleteProductValidator, deleteProduct);
 
 module.exports = productRouter;
