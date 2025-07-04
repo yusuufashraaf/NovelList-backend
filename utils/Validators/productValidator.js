@@ -52,7 +52,6 @@ const addProductValidator = [
     }),
 
   
-  check("imageCover").notEmpty().withMessage("Book imageCover is required"),
   check("images")
     .optional()
     .isArray()

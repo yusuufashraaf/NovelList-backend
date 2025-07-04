@@ -79,44 +79,115 @@ const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
 });
 
 
+// const addproduct = expressAsyncHandler(async (req, res, next) => {
+//     const { body } = req;
+//     if (
+//         !body.title ||
+//         !body.price ||
+//         !body.quantity ||
+//         !body.category ||
+//         !body.imageCover ||
+//         !body.author
+//     ) {
+//         return next(new AppError(400, "All required fields must be provided"));
+//     }
+
+//     body.slug = slugify(body.title);
+//     const product = await Product.create(body);
+
+//     await product.populate([
+//         {
+//             path: "category",
+//             select: "name -_id",
+//         },
+//         {
+//             path: "subcategory",
+//             select: "name -_id",
+//         },
+//     ]);
+//     if (!product) next(new AppError(400, "Product Not Added"));
+
+//     res.status(201).json({
+//         status: "success",
+//         massage: "Product Added Successfully",
+//         data: product,
+//     });
+// });
+
+
+
 const addproduct = expressAsyncHandler(async (req, res, next) => {
-    const { body } = req;
+    const { body, files } = req;
+
+    console.log("=== Incoming Book Body ===", body);
+    console.log("=== Incoming Files ===", files);
+
     if (
         !body.title ||
         !body.price ||
         !body.quantity ||
         !body.category ||
-        !body.imageCover ||
+        !files?.imageCover?.[0] ||
+        !files?.pdfLink?.[0] ||
         !body.author
     ) {
         return next(new AppError(400, "All required fields must be provided"));
     }
 
     body.slug = slugify(body.title);
-    const product = await Product.create(body);
 
-    await product.populate([
-        {
-            path: "category",
-            select: "name -_id",
-        },
-        {
-            path: "subcategory",
-            select: "name -_id",
-        },
-    ]);
-    if (!product) next(new AppError(400, "Product Not Added"));
+    // Parse subcategory if it exists
+    if (body.subcategory) {
+        try {
+            body.subcategory = JSON.parse(body.subcategory);
+        } catch (err) {
+            return next(new AppError(400, "Invalid subcategory format"));
+        }
+    }
 
-    res.status(201).json({
-        status: "success",
-        massage: "Product Added Successfully",
-        data: product,
-    });
+    // Upload imageCover to Cloudinary
+    const imageUpload = await cloudinary.uploader.upload_stream(
+        {
+            folder: "products",
+            resource_type: "image",
+        },
+        async (error, result) => {
+            if (error) return next(new AppError(500, "Image upload failed"));
+            body.imageCover = result.secure_url;
+
+            // Upload PDF to Cloudinary
+            const pdfUpload = await new Promise((resolve, reject) => {
+                cloudinary.uploader.upload_stream(
+                    {
+                        folder: "products",
+                        resource_type: "raw",
+                    },
+                    (error, result) => {
+                        if (error) return reject(new AppError(500, "PDF upload failed"));
+                        resolve(result.secure_url);
+                    }
+                ).end(files.pdfLink[0].buffer);
+            });
+
+            body.pdfLink = pdfUpload;
+
+            const product = await Product.create(body);
+
+            await product.populate([
+                { path: "category", select: "name -_id" },
+                { path: "subcategory", select: "name -_id" },
+            ]);
+
+            res.status(201).json({
+                status: "success",
+                message: "Book Added Successfully",
+                data: product,
+            });
+        }
+    );
+
+    imageUpload.end(files.imageCover[0].buffer);
 });
-
-
-
-
 
 
 const getAllProducts = expressAsyncHandler(async (req, res, next) => {
