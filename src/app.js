@@ -18,7 +18,12 @@ const wishlistRouter = require("../routes/wishlist");
 const commentRouter = require("../routes/commentRoute");
 const userRouter = require("../routes/userRoute");
 
+// swagger
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('../swagger.json');
+
 const app = express();
+
 app.use(cors());
 
 app.use(morgan("dev"));
@@ -28,6 +33,9 @@ app.set("query parser", (str) => qs.parse(str));
 // Middleware
 app.use(express.json());
 
+
+// 
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Routes
 app.use("/api/v1/users", require("../routes/userRoute"));
 app.use("/api/v1/auth", require("../routes/authRoute"));
@@ -42,6 +50,7 @@ app.use("/buy", paypalRoutes);
 
 // comment
 app.use("/comment", commentRouter);
+app.use("/api/v1/comment",commentRouter);
 
 // 404 handler
 app.use((req, res, next) => {

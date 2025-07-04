@@ -22,6 +22,11 @@ const commentSchema = new Schema({
     postedAt:{
         type: Date,
         default: Date.now
+    },
+    rate:{
+        type:Number,
+        min:0,
+        max:5
     }
 })
 const Comment = mongoose.model("Comment",commentSchema);
