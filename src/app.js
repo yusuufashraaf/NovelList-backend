@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const cors = require("cors");
 const qs = require("qs");
 const cloudinary = require("cloudinary").v2;
+const orderRouter = require("../routes/orderRoute");
 
 const paypalRoutes = require("../routes/paypalRoute");
 const errorHandel = require("../middlewares/errorHandel");
@@ -14,7 +15,7 @@ const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
 const cartRouter = require("../routes/cart");
 const wishlistRouter = require("../routes/wishlist");
-const commentRouter= require("../routes/commentRoute");
+const commentRouter = require("../routes/commentRoute");
 const userRouter = require("../routes/userRoute");
 
 // swagger
@@ -38,15 +39,17 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Routes
 app.use("/api/v1/users", require("../routes/userRoute"));
 app.use("/api/v1/auth", require("../routes/authRoute"));
-app.use("/api/v1/categories",categoryRouter);
-app.use("/api/v1/subCategories",subCategoryRouter);
-app.use("/api/v1/brands",brandRouter);
-app.use("/api/v1/products",productRouter);
+app.use("/api/v1/categories", categoryRouter);
+app.use("/api/v1/subCategories", subCategoryRouter);
+app.use("/api/v1/brands", brandRouter);
+app.use("/api/v1/products", productRouter);
+app.use("/api/v1/orders", orderRouter);
 
 //paypal
 app.use("/buy", paypalRoutes);
 
 // comment
+app.use("/comment", commentRouter);
 app.use("/api/v1/comment",commentRouter);
 
 // 404 handler
