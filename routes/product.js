@@ -20,6 +20,7 @@ const {
 const {
   manualPdfFileValidator,
   manualImageCoverValidator,
+  parseSubcategoryArray,
 } = require("../middlewares/productImg&FileValidator");
 
 const productRouter = Router();
@@ -31,6 +32,7 @@ productRouter
         uploadProductFiles,
         manualPdfFileValidator,
         manualImageCoverValidator,
+        parseSubcategoryArray,
         addProductValidator,
         uploadImagesToCloudinary,
         addproduct);
@@ -41,7 +43,7 @@ productRouter.get("/authors", getUniqueAuthors);
 productRouter
   .route("/:id")
   .get(getProductValidator, getproduct)
-  .put(uploadProductFiles, uploadImagesToCloudinary, updateProductValidator, UpdateProduct)
+  .put(uploadProductFiles, uploadImagesToCloudinary, parseSubcategoryArray,updateProductValidator, UpdateProduct)
   .delete(deleteProductValidator, deleteProduct);
 
 module.exports = productRouter;

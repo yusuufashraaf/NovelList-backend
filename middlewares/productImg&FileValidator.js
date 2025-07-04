@@ -31,8 +31,30 @@ const manualImageCoverValidator = (req, res, next) => {
 
     next();
 };
+const parseSubcategoryArray = (req, res, next) => {
+  if (typeof req.body.subcategory === 'string') {
+    try {
+      req.body.subcategory = JSON.parse(req.body.subcategory);
+    } catch (err) {
+      return res.status(400).json({
+        errors: [{
+          type: "field",
+          value: req.body.subcategory,
+          msg: "Invalid JSON format for subcategory",
+          path: "subcategory",
+          location: "body"
+        }]
+      });
+    }
+  }
+  next();
+};
+
+
+
 
 module.exports = {
     manualPdfFileValidator,
     manualImageCoverValidator,
+    parseSubcategoryArray
 };
