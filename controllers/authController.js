@@ -1,3 +1,5 @@
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
@@ -337,9 +339,57 @@ exports.resetPassword = async (req, res, next) => {
 };
 
 exports.logout = (req, res) => {
-  // No need to do anything server-side for stateless JWT logout
-  res.status(200).json({
-    status: "success",
-    message: "Logged out successfully"
-  });
+    // No need to do anything server-side for stateless JWT logout
+    res.status(200).json({
+        status: "success",
+        message: "Logged out successfully"
+    });
+};
+
+// @desc Google Sign-In
+// @route POST /api/v1/auth/google
+// @access Public
+exports.googleSignIn = async (req, res) => {
+    try {
+        const { token } = req.body;
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const { email, name } = ticket.getPayload();
+
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            user = await User.create({
+                name,
+                email,
+                password: crypto.randomBytes(20).toString('hex') // dummy password
+            });
+        }
+
+        const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+            expiresIn: process.env.JWT_EXPIRES_IN
+        });
+
+        res.status(200).json({
+            status: 'success',
+            token: jwtToken,
+            data: {
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role
+                }
+            }
+        });
+    } catch (error) {
+        res.status(401).json({
+            status: 'fail',
+            message: 'Google authentication failed',
+            error: error.message
+        });
+    }
 };
