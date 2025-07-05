@@ -12,13 +12,17 @@ const createComment = async(comment)=>{
 const listComments = async (id)=>{
     try {
         const comments = await Comment.find({ bookId: id });
-        return comments
-
+        return comments;
     } catch (error) {
         throw error; 
     }
 
 
+}
+const getAverageReview =(comments)=>{
+    if (!comments || comments.length === 0) return 0;
+    const sumReviews = comments.reduce((sum, comment) => sum + comment.rate, 0);
+    return sumReviews/comments.length;
 }
 const deleteComment = async(id)=>{
     try {
@@ -33,5 +37,6 @@ const deleteComment = async(id)=>{
 module.exports ={
     createComment,
     listComments,
-    deleteComment
+    deleteComment,
+    getAverageReview
 }
