@@ -1,5 +1,21 @@
 const mongoose = require("mongoose");
 
+const itemEntrySchema = new mongoose.Schema({
+  productId: {
+    type: mongoose.Schema.ObjectId,
+    ref: "Product",
+    required: [true, "Product is required"],
+  },
+  addedAt: {
+    type: Date,
+    default: Date.now,
+  },
+  expiresAt: {
+    type: Date,
+    default: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // 2 days
+  },
+});
+
 const cartItemSchema = new mongoose.Schema(
   {
     product: {
@@ -13,6 +29,7 @@ const cartItemSchema = new mongoose.Schema(
       min: [1, "Quantity must be at least 1"],
       default: 1,
     },
+    itemEntry: [itemEntrySchema],
     price: {
       type: Number,
       required: [true, "Price is required"],
