@@ -9,6 +9,8 @@ router.post('/create',validateComment,async(req,res)=>{
      try {
         const comment = new Comment(req.body);
         const savedComment = await commentController.createComment(comment);
+        console.log(savedComment);
+        
         res.status(201).json({
             status: "Success",
             message: "comment created successfully",
