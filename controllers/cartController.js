@@ -5,26 +5,21 @@ const Product = require("../models/product");
 
 // Add item to cart
 const addToCart = expressAsyncHandler(async (req, res, next) => {
-  const { productId, quantity = 1 } = req.body;
-  //   const userId = req.user.id; // Assuming you have user authentication
+  const { productId, quantity = 1, expiryDuration } = req.body;
   const userId = "686304a6b8fa343b7fd6e3b9";
 
-  // Validate product exists
   const product = await Product.findById(productId);
   if (!product) {
     return next(new AppError(404, "Product not found"));
   }
 
-  // Check if product has enough stock
   if (product.quantity < quantity) {
     return next(new AppError(400, "Out of stock"));
   }
 
-  // Find or create cart for user
   let cart = await Cart.findOne({ user: userId });
 
   if (!cart) {
-    // Create new cart
     cart = await Cart.create({
       user: userId,
       cartItems: [
@@ -32,49 +27,76 @@ const addToCart = expressAsyncHandler(async (req, res, next) => {
           product: productId,
           quantity: quantity,
           price: product.price,
+          itemEntry: Array.from({ length: quantity }, () => ({
+            productId,
+            addedAt: Date.now(),
+            expiresAt: new Date(Date.now() + expiryDuration),
+          })),
         },
       ],
     });
   } else {
-    // Check if product already exists in cart
     const existingItemIndex = cart.cartItems.findIndex(
       (item) => item.product.toString() === productId
     );
 
     if (existingItemIndex > -1) {
-      // Update quantity of existing item
       cart.cartItems[existingItemIndex].quantity += quantity;
       cart.cartItems[existingItemIndex].subTotalPrice =
         cart.cartItems[existingItemIndex].quantity *
         cart.cartItems[existingItemIndex].price;
+
+      cart.cartItems[existingItemIndex].itemEntry.push({
+        productId: productId,
+        addedAt: Date.now(),
+        expiresAt: new Date(Date.now() + expiryDuration),
+      });
     } else {
-      // Add new item to cart
+      const itemEntries = Array.from({ length: quantity }, () => ({
+        productId: productId,
+        addedAt: Date.now(),
+        expiresAt: new Date(Date.now() + expiryDuration),
+      }));
+
       cart.cartItems.push({
         product: productId,
         quantity: quantity,
         price: product.price,
         subTotalPrice: quantity * product.price,
+        itemEntry: itemEntries,
       });
     }
 
     await cart.save();
   }
 
-  // Populate product details
+  // IMPORTANT: populate here after save to reflect changes clearly
   await cart.populate({
     path: "cartItems.product",
     select: "title imageCover price priceAfterDiscount author",
   });
 
-  // After cart is saved
-  product.quantity -= quantity;
-  await product.save();
-
   res.status(200).json({
     status: "success",
     message: "Item added to cart successfully",
-    data: cart,
+    data: {
+      cartItems: cart.cartItems.map((item) => ({
+        productId: item.product._id,
+        title: item.product.title,
+        author: item.product.author,
+        image: item.product.imageCover,
+        price: item.product.price,
+        quantity: item.quantity,
+        subTotal: item.subTotalPrice,
+        itemEntries: item.itemEntry, // <-- Clearly included
+      })),
+      totalPrice: cart.totalPrice,
+      totalQuantity: cart.totalQuantity,
+    },
   });
+
+  product.quantity -= quantity;
+  await product.save();
 });
 
 // Get user's cart
@@ -86,6 +108,8 @@ const getCart = expressAsyncHandler(async (req, res, next) => {
     path: "cartItems.product",
     select: "_id title imageCover price priceAfterDiscount quantity author",
   });
+
+  // return itemEntry in response
 
   if (!cart) {
     return res.status(200).json({
@@ -110,6 +134,7 @@ const getCart = expressAsyncHandler(async (req, res, next) => {
         price: item.product.price,
         quantity: item.quantity,
         subTotal: item.subTotalPrice,
+        itemEntries: item.itemEntry, // <-- ensure plural naming
       })),
       totalPrice: cart.totalPrice,
       totalQuantity: cart.totalQuantity,
@@ -120,21 +145,22 @@ const getCart = expressAsyncHandler(async (req, res, next) => {
 // Update cart item quantity
 const updateCartItem = expressAsyncHandler(async (req, res, next) => {
   const { productId } = req.params;
-  const { quantity } = req.body;
-  //   const userId = req.user.id;
+  const { quantity, expiryDuration } = req.body;
   const userId = "686304a6b8fa343b7fd6e3b9";
+
+  if (!productId) {
+    return next(new AppError(400, "ProductId is required"));
+  }
 
   if (!quantity || quantity < 1) {
     return next(new AppError(400, "Quantity must be at least 1"));
   }
 
-  // Find the cart for the user
   const cart = await Cart.findOne({ user: userId });
   if (!cart) {
     return next(new AppError(404, "Cart not found"));
   }
 
-  // Find the cart item
   const cartItem = cart.cartItems.find(
     (item) => item.product.toString() === productId
   );
@@ -142,29 +168,37 @@ const updateCartItem = expressAsyncHandler(async (req, res, next) => {
     return next(new AppError(404, "Item not found in cart"));
   }
 
-  // Find the product
   const product = await Product.findById(productId);
   if (!product) {
     return next(new AppError(404, "Product not found"));
   }
 
-  // Calculate the difference between new and old quantity
   const oldQuantity = cartItem.quantity;
   const diff = quantity - oldQuantity;
 
-  // If increasing quantity, check stock
   if (diff > 0) {
     if (product.quantity < diff) {
       return next(new AppError(400, "Out of stock"));
     }
     product.quantity -= diff;
+
+    // Add new itemEntries explicitly when increasing quantity
+    for (let i = 0; i < diff; i++) {
+      cartItem.itemEntry.push({
+        productId: productId,
+        addedAt: new Date(),
+        expiresAt: new Date(Date.now() + expiryDuration),
+      });
+    }
   } else if (diff < 0) {
-    // If decreasing quantity, return stock
     product.quantity += Math.abs(diff);
+
+    // Remove itemEntries explicitly when decreasing quantity
+    cartItem.itemEntry.splice(diff); // removes |diff| entries from the end
   }
+
   await product.save();
 
-  // Update cart item
   cartItem.quantity = quantity;
   cartItem.subTotalPrice = quantity * cartItem.price;
 
@@ -178,13 +212,29 @@ const updateCartItem = expressAsyncHandler(async (req, res, next) => {
   res.status(200).json({
     status: "success",
     message: "Cart item updated successfully",
-    data: cart,
+    data: {
+      cartItems: cart.cartItems.map((item) => ({
+        productId: item.product._id,
+        title: item.product.title,
+        author: item.product.author,
+        image: item.product.imageCover,
+        price: item.product.price,
+        quantity: item.quantity,
+        subTotal: item.subTotalPrice,
+        itemEntries: item.itemEntry, // Clearly show updated itemEntries
+      })),
+      totalPrice: cart.totalPrice,
+      totalQuantity: cart.totalQuantity,
+    },
   });
 });
 
 // Remove item from cart
 const removeFromCart = expressAsyncHandler(async (req, res, next) => {
   const { productId } = req.params;
+  if (!productId) {
+    return next(new AppError(400, "ProductId is required"));
+  }
   //   const userId = req.user.id;
   const userId = "686304a6b8fa343b7fd6e3b9";
 
