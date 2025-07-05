@@ -9,6 +9,8 @@ router.post('/create',validateComment,async(req,res)=>{
      try {
         const comment = new Comment(req.body);
         const savedComment = await commentController.createComment(comment);
+        console.log(savedComment);
+        
         res.status(201).json({
             status: "Success",
             message: "comment created successfully",
@@ -34,8 +36,13 @@ router.get('/:id',async (req,res)=>{
         }
         
         try {
-            const comments = await commentController.listComments(id);
-            res.status(200).json(comments);
+            const comments = await commentController.listComments(id); 
+            const avgReviewperbook = commentController.getAverageReview(comments);      
+            res.status(200).json(
+                {comments:comments,
+                count:comments.length,
+                avgRate:avgReviewperbook
+            });
         } catch (err) {
             console.error('Error fetching comments:', err);
             res.status(500).json({ error: 'Internal server error' });
@@ -43,6 +50,7 @@ router.get('/:id',async (req,res)=>{
 
 
 })
+
 router.delete('/:id',async(req,res)=>{
         const { id } = req.params;
         if (!mongoose.Types.ObjectId.isValid(id)) {

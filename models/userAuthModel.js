@@ -1,6 +1,10 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
+const jwt = require("jsonwebtoken");
+const util = require("util");
+const jwtVerify = util.promisify(jwt.verify);
+
 const userAuthSchema = new mongoose.Schema({
     name: {
         type: String,
@@ -27,6 +31,12 @@ const userAuthSchema = new mongoose.Schema({
     active: {
         type: Boolean,
         default: true,
+    },
+    verifyEmailToken: String,
+    verifyEmailExpires: Date,
+    isVerified: {
+        type: Boolean,
+        default: false
     },
     passwordChangedAt: Date,
     passwordResetCode: String,
@@ -66,4 +76,17 @@ userAuthSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
     return false;
 };
 
+
+userAuthSchema.statics.verifyUser = async function(token){
+    const User = this;
+    try{
+        const {id } = await jwtVerify(token,process.env.JWT_SECRET);
+        return await User.findById(id);
+    }catch(err){
+        const Errr = new Error("You are not Authorized");
+        Errr.status = 401; 
+        throw Errr;
+    }
+
+}
 module.exports = mongoose.model("UserAuth", userAuthSchema);

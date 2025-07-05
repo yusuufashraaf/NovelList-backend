@@ -1,5 +1,5 @@
 const express = require("express");
-const { signup, login, forgotPassword, verifyPasswordResetCode, resetPassword, logout, googleSignIn } = require("../controllers/authController");
+const { signup, login, forgotPassword, verifyPasswordResetCode, resetPassword, logout, googleSignIn, verifyEmail } = require("../controllers/authController");
 const { signupValidator, loginValidator } = require("../middlewares/authValidator");
 const { protect } = require("../controllers/authController");
 const router = express.Router();
@@ -7,6 +7,9 @@ const router = express.Router();
 router
   .route("/signup")
   .post(signupValidator, signup);
+
+router
+  .get("/verifyEmail/:otp", verifyEmail);
 
 router
   .route("/login")

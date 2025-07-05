@@ -1,7 +1,8 @@
 const Comment = require('../models/comment');
-
+const mongoose = require('mongoose');
+const UserAuth =require('../models/userAuthModel'); 
 const createComment = async(comment)=>{
-    try {
+    try { 
          const savedComment = await comment.save();
         return savedComment; 
     } catch (error) {
@@ -9,16 +10,24 @@ const createComment = async(comment)=>{
         throw error; 
     }
 }
+
+
+
 const listComments = async (id)=>{
     try {
-        const comments = await Comment.find({ bookId: id });
+        const comments = await Comment.find({ bookId: id })
+        .populate('userId','name');
         return comments
-
     } catch (error) {
         throw error; 
     }
 
 
+}
+const getAverageReview =(comments)=>{
+    if (!comments || comments.length === 0) return 0;
+    const sumReviews = comments.reduce((sum, comment) => sum + comment.rate, 0);
+    return sumReviews/comments.length;
 }
 const deleteComment = async(id)=>{
     try {
@@ -33,5 +42,6 @@ const deleteComment = async(id)=>{
 module.exports ={
     createComment,
     listComments,
-    deleteComment
+    deleteComment,
+    getAverageReview
 }

@@ -6,7 +6,7 @@ const { ObjectId } = Schema.Types;
 const commentSchema = new Schema({
     userId:{
         type: ObjectId,
-        ref: 'User',
+        ref: 'UserAuth',
         required: true
     },
     bookId:{
