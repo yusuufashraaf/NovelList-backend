@@ -6,7 +6,7 @@ const Product = require("../models/product");
 // Add item to cart
 const addToCart = expressAsyncHandler(async (req, res, next) => {
   const { productId, quantity = 1, expiryDuration } = req.body;
-  const userId = "686304a6b8fa343b7fd6e3b9";
+  const userId = "6868bb92b26da1d9f5c66586";
 
   const product = await Product.findById(productId);
   if (!product) {
@@ -102,7 +102,7 @@ const addToCart = expressAsyncHandler(async (req, res, next) => {
 // Get user's cart
 const getCart = expressAsyncHandler(async (req, res, next) => {
   //   const userId = req.user.id;
-  const userId = "686304a6b8fa343b7fd6e3b9";
+  const userId = "6868bb92b26da1d9f5c66586";
 
   const cart = await Cart.findOne({ user: userId }).populate({
     path: "cartItems.product",
@@ -146,7 +146,7 @@ const getCart = expressAsyncHandler(async (req, res, next) => {
 const updateCartItem = expressAsyncHandler(async (req, res, next) => {
   const { productId } = req.params;
   const { quantity, expiryDuration } = req.body;
-  const userId = "686304a6b8fa343b7fd6e3b9";
+  const userId = "6868bb92b26da1d9f5c66586";
 
   if (!productId) {
     return next(new AppError(400, "ProductId is required"));
@@ -236,7 +236,7 @@ const removeFromCart = expressAsyncHandler(async (req, res, next) => {
     return next(new AppError(400, "ProductId is required"));
   }
   //   const userId = req.user.id;
-  const userId = "686304a6b8fa343b7fd6e3b9";
+  const userId = "6868bb92b26da1d9f5c66586";
 
   const cart = await Cart.findOne({ user: userId });
   if (!cart) {
@@ -273,7 +273,7 @@ const removeFromCart = expressAsyncHandler(async (req, res, next) => {
 // Clear entire cart
 const clearCart = expressAsyncHandler(async (req, res, next) => {
   //   const userId = req.user.id;
-  const userId = "686304a6b8fa343b7fd6e3b9";
+  const userId = "6868bb92b26da1d9f5c66586";
 
   const cart = await Cart.findOne({ user: userId });
   if (!cart) {

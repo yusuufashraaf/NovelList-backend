@@ -19,8 +19,8 @@ const commentRouter = require("../routes/commentRoute");
 const userRouter = require("../routes/userRoute");
 
 // swagger
-const swaggerUi = require('swagger-ui-express');
-const swaggerDocument = require('../swagger.json');
+const swaggerUi = require("swagger-ui-express");
+const swaggerDocument = require("../swagger.json");
 
 const app = express();
 
@@ -35,11 +35,11 @@ app.use(express.json());
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key:    process.env.CLOUDINARY_API_KEY,
+  api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
-// 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+//
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Routes
 app.use("/api/v1/users", require("../routes/userRoute"));
 app.use("/api/v1/auth", require("../routes/authRoute"));
@@ -48,13 +48,16 @@ app.use("/api/v1/subCategories", subCategoryRouter);
 app.use("/api/v1/brands", brandRouter);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/orders", orderRouter);
+app.use("/api/v1/cart", cartRouter);
+app.use("/api/v1/wishlist", wishlistRouter);
+app.use("/api/v1/comments", commentRouter);
 
 //paypal
 app.use("/buy", paypalRoutes);
 
 // comment
 app.use("/comment", commentRouter);
-app.use("/api/v1/comment",commentRouter);
+app.use("/api/v1/comment", commentRouter);
 
 // 404 handler
 app.use((req, res, next) => {
