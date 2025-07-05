@@ -62,48 +62,48 @@ class ApiFeatures {
         return this;
     }
 
-   search(modelName) {
-    if (this.queryString.keyword) {
-        const keyword = this.queryString.keyword;
-        const keywordSearchConditions = [];
+    search(modelName) {
+        if (this.queryString.keyword) {
+            const keyword = this.queryString.keyword;
+            const keywordSearchConditions = [];
 
-        if (modelName === 'Product') {
-            // 1. Search for the entire keyword phrase (case-insensitive)
-            keywordSearchConditions.push(
-                { title: { $regex: keyword, $options: 'i' } },
-                { author: { $regex: keyword, $options: 'i' } },
-                { description: { $regex: keyword, $options: 'i' } } // <--- تم إضافة هذا السطر
-            );
+            if (modelName === 'Product') {
+                // 1. Search for the entire keyword phrase (case-insensitive)
+                keywordSearchConditions.push(
+                    { title: { $regex: keyword, $options: 'i' } },
+                    { author: { $regex: keyword, $options: 'i' } },
+                    { description: { $regex: keyword, $options: 'i' } } // <--- تم إضافة هذا السطر
+                );
 
-            // 2. Split the keyword into individual words and search for each word
-            const words = keyword.split(/\s+/).filter(Boolean);
-            if (words.length > 1) {
-                words.forEach(word => {
-                    keywordSearchConditions.push(
-                        { title: { $regex: word, $options: 'i' } },
-                        { author: { $regex: word, $options: 'i' } },
-                        { description: { $regex: word, $options: 'i' } } // <--- تم إضافة هذا السطر
-                    );
-                });
+                // 2. Split the keyword into individual words and search for each word
+                const words = keyword.split(/\s+/).filter(Boolean);
+                if (words.length > 1) {
+                    words.forEach(word => {
+                        keywordSearchConditions.push(
+                            { title: { $regex: word, $options: 'i' } },
+                            { author: { $regex: word, $options: 'i' } },
+                            { description: { $regex: word, $options: 'i' } } // <--- تم إضافة هذا السطر
+                        );
+                    });
+                }
+            } else if (modelName === 'Category' || modelName === 'User') {
+                keywordSearchConditions.push({ name: { $regex: keyword, $options: 'i' } });
             }
-        } else if (modelName === 'Category' || modelName === 'User') {
-            keywordSearchConditions.push({ name: { $regex: keyword, $options: 'i' } });
+
+            if (keywordSearchConditions.length > 0) {
+                this.queryConditions.$and = this.queryConditions.$and || [];
+                this.queryConditions.$and.push({ $or: keywordSearchConditions });
+            }
         }
 
-        if (keywordSearchConditions.length > 0) {
-            this.queryConditions.$and = this.queryConditions.$and || [];
-            this.queryConditions.$and.push({ $or: keywordSearchConditions });
-        }
+        this.mongooseQuery = this.mongooseQuery.find(this.queryConditions);
+        return this;
     }
-   
-    this.mongooseQuery = this.mongooseQuery.find(this.queryConditions);
-    return this;
-}
 
 
     paginate(countDocuments) {
         const page = this.queryString.page * 1 || 1;
-        const limit = this.queryString.limit * 1 || 100; 
+        const limit = this.queryString.limit * 1 || 100;
         const skip = (page - 1) * limit;
         const endIndex = page * limit;
 

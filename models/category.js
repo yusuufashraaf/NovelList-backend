@@ -17,7 +17,6 @@ const categorySchma = new mongoose.Schema({
         lowercase: true
     },
 
-    image: String,
 }, { timestamps: true })
 
 categorySchma.index({ name: 1 }, { unique: true })

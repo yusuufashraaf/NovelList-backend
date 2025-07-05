@@ -25,6 +25,11 @@ const swaggerDocument = require('../swagger.json');
 const app = express();
 
 app.use(cors());
+app.use(limiter);
+app.use(helmet());
+app.use(sanitizeMongoInput);
+app.use(xss());
+app.use(hpp());
 
 app.use(morgan("dev"));
 
