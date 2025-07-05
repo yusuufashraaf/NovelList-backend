@@ -33,7 +33,6 @@ module.exports = (err, req, res, next) => {
         return res.status(400).json({
             status: "Failed",
             message: err.message,
-            errors: err.stack
         })
     }
 
@@ -48,6 +47,7 @@ module.exports = (err, req, res, next) => {
     return res.status(500).json({
         status: err.status,
         message: "Internal Server Error",
+        isOperational: true,
         err:err.stack
     })
 
