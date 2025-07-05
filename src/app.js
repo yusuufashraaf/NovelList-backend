@@ -56,7 +56,6 @@ app.use("/api/v1/comments", commentRouter);
 app.use("/buy", paypalRoutes);
 
 // comment
-app.use("/comment", commentRouter);
 app.use("/api/v1/comment", commentRouter);
 
 // 404 handler

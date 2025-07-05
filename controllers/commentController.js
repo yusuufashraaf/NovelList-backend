@@ -29,16 +29,37 @@ const getAverageReview =(comments)=>{
     const sumReviews = comments.reduce((sum, comment) => sum + comment.rate, 0);
     return sumReviews/comments.length;
 }
-const deleteComment = async(id)=>{
-    try {
-         const commentDeleted = await Comment.findByIdAndDelete(id);
-        return commentDeleted
+const deleteComment = async (commentId, userId) => {
+  try {
+    const isOwner = await CheckAuthorityOfComment(commentId, userId);
 
-    } catch (error) {
-        throw error; 
+    if (!isOwner) {
+      const error = new Error("Not the owner of the comment");
+      error.status = 403;
+      throw error;
     }
-}
 
+    const deleted = await Comment.findByIdAndDelete(commentId);
+    return deleted;
+
+  } catch (error) {
+    throw error;
+  }
+};
+
+const CheckAuthorityOfComment = async (commentId, userId) => {
+  try {
+    const comment = await Comment.findById(commentId);
+    if (!comment) return false;
+    console.log(comment);
+    
+    // Compare userId with comment.userId (both as strings)
+    return comment.userId.toString() === userId.toString();
+  } catch (error) {
+    console.error("Error in CheckAuthorityOfComment:", error);
+    return false;
+  }
+};
 module.exports ={
     createComment,
     listComments,

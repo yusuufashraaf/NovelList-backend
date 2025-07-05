@@ -5,6 +5,7 @@ const Comment = require('../models/comment');
 const Product = require("../models/product");
 const commentController = require('../controllers/commentController');
 const validateComment = require('../middlewares/validateComment')
+const Authenticate = require('../middlewares/Authenticate')
 router.post('/create',validateComment,async(req,res)=>{ 
      try {
         const comment = new Comment(req.body);
@@ -51,7 +52,8 @@ router.get('/:id',async (req,res)=>{
 
 })
 
-router.delete('/:id',async(req,res)=>{
+router.delete('/:id',Authenticate,async(req,res)=>{
+        
         const { id } = req.params;
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: 'Invalid comment ID format' });
@@ -61,10 +63,10 @@ router.delete('/:id',async(req,res)=>{
             return res.status(404).json({ error: 'comment not found' });
         }
         try {
-            const commentDeleted = await commentController.deleteComment(id);
-                    res.json(commentDeleted);
+            const commentDeleted = await commentController.deleteComment(req.params.id, req.user._id)
+            res.json(commentDeleted);
         } catch (error) {
-            console.error('Error deleteing comment:', err);
+            console.error('Error deleteing comment:', error);
             res.status(500).json({ error: 'Internal server error' });
         }
         
