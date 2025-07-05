@@ -91,6 +91,7 @@ exports.login = async (req, res, next) => {
 
     // 2 -> check if user exists
     const user = await User.findOne({ email }).select("+password");
+    
     if (!user || !user.active) {
         return res.status(401).json({
             status: "fail",

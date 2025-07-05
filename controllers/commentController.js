@@ -1,7 +1,8 @@
 const Comment = require('../models/comment');
-
+const mongoose = require('mongoose');
+const UserAuth =require('../models/userAuthModel'); 
 const createComment = async(comment)=>{
-    try {
+    try { 
          const savedComment = await comment.save();
         return savedComment; 
     } catch (error) {
@@ -9,10 +10,14 @@ const createComment = async(comment)=>{
         throw error; 
     }
 }
+
+
+
 const listComments = async (id)=>{
     try {
-        const comments = await Comment.find({ bookId: id });
-        return comments;
+        const comments = await Comment.find({ bookId: id })
+        .populate('userId','name');
+        return comments
     } catch (error) {
         throw error; 
     }
