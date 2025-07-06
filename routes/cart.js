@@ -3,6 +3,7 @@ const {
   addToCart,
   getCart,
   updateCartItem,
+  removeCartEntryById,
   removeFromCart,
   clearCart,
 } = require("../controllers/cartController");

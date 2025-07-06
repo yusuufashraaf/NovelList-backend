@@ -63,7 +63,12 @@ const getWishlist = expressAsyncHandler(async (req, res, next) => {
   });
 
   if (!wishlist) {
-    return next(new AppError(404, "Wishlist not found"));
+    return res.status(200).json({
+      status: "success",
+      data: {
+        wishlist: [],
+      },
+    });
   }
 
   res.status(200).json({
