@@ -124,8 +124,10 @@ exports.getMe = (req, res) => {
         status: "success",
         data: {
             user: {
+                _id:req.user._id,
                 name: req.user.name,
                 email: req.user.email,
+                createdAt:req.user.createdAt,
                 role: req.user.role
             }
         }

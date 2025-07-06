@@ -13,7 +13,7 @@ const orderSchema = new Schema({
   books: [{
     book: {
       type: ObjectId,
-      ref: 'Book',
+      ref: 'Product',
       required: true
     },
     quantity: {
@@ -74,5 +74,5 @@ const orderSchema = new Schema({
     type: String
     }
 })
-const Order = mongoose.model("Orders",orderSchema);
+const Order = mongoose.model("Order",orderSchema);
 module.exports = Order;
