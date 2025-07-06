@@ -1,4 +1,5 @@
 const { Router } = require("express");
+const Authenticate = require("../middlewares/Authenticate");
 const {
   addToWishlist,
   getWishlist,
@@ -9,8 +10,8 @@ const wishlistRouter = Router();
 
 wishlistRouter
   .route("/")
-  .post(addToWishlist)
-  .get(getWishlist)
-  .delete(removeFromWishlist);
+  .post(Authenticate, addToWishlist)
+  .get(Authenticate, getWishlist)
+  .delete(Authenticate, removeFromWishlist);
 
 module.exports = wishlistRouter;
