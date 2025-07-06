@@ -10,18 +10,7 @@ class ApiFeatures {
         const excludesFields = ['page', 'sort', 'limit', 'fields', 'keyword', 'genre', 'rating']; // Add genre and rating here
         excludesFields.forEach((field) => delete queryStringObj[field]);
 
-        // 1. Handle genre -> convert genre name to category ID
-        if (this.queryString.genre) {
-            const Category = require('../models/category');
-            const category = await Category.findOne({ name: this.queryString.genre });
-            if (category) {
-                this.queryConditions.category = category._id.toString();
-            } else {
-                // If genre not found, return an empty query to signify no results
-                this.mongooseQuery = this.mongooseQuery.find({ _id: null }); // No documents will match
-                return this;
-            }
-        }
+        
 
         // 2. Handle rating filter
         if (this.queryString.rating) {
