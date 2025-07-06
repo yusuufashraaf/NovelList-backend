@@ -63,8 +63,30 @@ const getUserComments = async (userId) => {
     const comments = await Comment.find({ userId }).populate(
       "bookId",
       "title author imageCover"
-    ); 
+    );
     return comments;
+  } catch (error) {
+    throw error;
+  }
+};
+
+const updateComment = async (commentId, userId, updatedFields) => {
+  try {
+    const isOwner = await CheckAuthorityOfComment(commentId, userId);
+
+    if (!isOwner) {
+      const error = new Error("Not the owner of the comment");
+      error.status = 403;
+      throw error;
+    }
+
+    const updated = await Comment.findByIdAndUpdate(
+      commentId,
+      { $set: updatedFields },
+      { new: true }
+    );
+
+    return updated;
   } catch (error) {
     throw error;
   }
@@ -76,4 +98,5 @@ module.exports = {
   deleteComment,
   getAverageReview,
   getUserComments,
+  updateComment,
 };

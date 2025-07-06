@@ -80,4 +80,35 @@ router.get("/user/:userId", async (req, res) => {
   }
 });
 
+router.put("/:id", Authenticate, async (req, res) => {
+  const commentId = req.params.id;
+  const userId = req.user._id;
+
+  if (!mongoose.Types.ObjectId.isValid(commentId)) {
+    return res.status(400).json({ error: "Invalid comment ID format" });
+  }
+
+  try {
+    const updated = await commentController.updateComment(commentId, userId, {
+      comment: req.body.comment,
+      rate: req.body.rate,
+    });
+
+    if (!updated) {
+      return res
+        .status(404)
+        .json({ error: "Comment not found or not authorized" });
+    }
+
+    res.status(200).json({
+      status: "Success",
+      message: "Comment updated successfully",
+      data: updated,
+    });
+  } catch (error) {
+    console.error("Error updating comment:", error);
+    res.status(error.status || 500).json({ error: error.message });
+  }
+});
+
 module.exports = router;
