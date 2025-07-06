@@ -2,11 +2,14 @@ const expressAsyncHandler = require("express-async-handler");
 const AppError = require("../utils/AppError");
 const Cart = require("../models/cart");
 const Product = require("../models/product");
+const expiryDuration = 60 * 1000;
 
 // Add item to cart
 const addToCart = expressAsyncHandler(async (req, res, next) => {
-  const { productId, quantity = 1, expiryDuration } = req.body;
-  const userId = "6868bb92b26da1d9f5c66586";
+  const { productId, quantity = 1 } = req.body;
+  console.log("Received body:", req.body);
+
+  const userId = "6869e1b80fcf4586fc1989f2";
 
   const product = await Product.findById(productId);
   if (!product) {
@@ -99,30 +102,64 @@ const addToCart = expressAsyncHandler(async (req, res, next) => {
   await product.save();
 });
 
-// Get user's cart
+// Get user's cart ─ cleans expired entries on the fly
 const getCart = expressAsyncHandler(async (req, res, next) => {
-  //   const userId = req.user.id;
-  const userId = "6868bb92b26da1d9f5c66586";
+  // In production replace with: const userId = req.user.id;
+  const userId = "6869e1b80fcf4586fc1989f2";
 
+  // 1) Fetch cart + product data
   const cart = await Cart.findOne({ user: userId }).populate({
     path: "cartItems.product",
     select: "_id title imageCover price priceAfterDiscount quantity author",
   });
 
-  // return itemEntry in response
-
+  // If user has no cart yet
   if (!cart) {
     return res.status(200).json({
       status: "success",
       message: "Cart is empty",
-      data: {
-        cartItems: [],
-        totalPrice: 0,
-        totalQuantity: 0,
-      },
+      data: { cartItems: [], totalPrice: 0, totalQuantity: 0 },
     });
   }
 
+  // 2) Remove expired entries & recalc quantities/sub-totals
+  let cartChanged = false;
+
+  for (const item of cart.cartItems) {
+    const before = item.itemEntry.length;
+
+    // keep only still-valid entries
+    item.itemEntry = item.itemEntry.filter(
+      (entry) => entry.expiresAt > Date.now()
+    );
+
+    const expiredCount = before - item.itemEntry.length;
+
+    if (expiredCount > 0) {
+      cartChanged = true;
+      item.quantity = item.itemEntry.length;
+      item.subTotalPrice = item.quantity * item.price;
+
+      // Restore product quantity for expired entries
+      const product = await Product.findById(item.product);
+      if (product) {
+        product.quantity += expiredCount;
+        await product.save();
+      }
+    }
+  }
+
+  // Remove items whose quantity became 0
+  if (cartChanged) {
+    cart.cartItems = cart.cartItems.filter((item) => item.quantity > 0);
+    await cart.save();
+    await cart.populate({
+      path: "cartItems.product",
+      select: "_id title imageCover price priceAfterDiscount quantity author",
+    });
+  }
+
+  // 4) Send cleaned-up cart to client
   res.status(200).json({
     status: "success",
     data: {
@@ -134,7 +171,7 @@ const getCart = expressAsyncHandler(async (req, res, next) => {
         price: item.product.price,
         quantity: item.quantity,
         subTotal: item.subTotalPrice,
-        itemEntries: item.itemEntry, // <-- ensure plural naming
+        itemEntries: item.itemEntry,
       })),
       totalPrice: cart.totalPrice,
       totalQuantity: cart.totalQuantity,
@@ -145,8 +182,8 @@ const getCart = expressAsyncHandler(async (req, res, next) => {
 // Update cart item quantity
 const updateCartItem = expressAsyncHandler(async (req, res, next) => {
   const { productId } = req.params;
-  const { quantity, expiryDuration } = req.body;
-  const userId = "6868bb92b26da1d9f5c66586";
+  const { quantity } = req.body;
+  const userId = "6869e1b80fcf4586fc1989f2";
 
   if (!productId) {
     return next(new AppError(400, "ProductId is required"));
@@ -229,6 +266,65 @@ const updateCartItem = expressAsyncHandler(async (req, res, next) => {
   });
 });
 
+// Remove cart entry by id
+const removeCartEntryById = expressAsyncHandler(async (req, res, next) => {
+  const { entryId } = req.params;
+  const userId = "6869e1b80fcf4586fc1989f2"; // Replace with req.user.id in production
+
+  const cart = await Cart.findOne({ user: userId });
+  if (!cart) {
+    return next(new AppError(404, "Cart not found"));
+  }
+
+  let entryFound = false;
+  // Loop through cartItems to find and remove the entry
+  cart.cartItems.forEach((item) => {
+    const initialLength = item.itemEntry.length;
+    item.itemEntry = item.itemEntry.filter(
+      (entry) => entry._id.toString() !== entryId
+    );
+    if (item.itemEntry.length < initialLength) {
+      entryFound = true;
+      // Update quantity and subtotal
+      item.quantity = item.itemEntry.length;
+      item.subTotalPrice = item.quantity * item.price;
+    }
+  });
+
+  // Remove cartItems with zero quantity
+  cart.cartItems = cart.cartItems.filter((item) => item.quantity > 0);
+
+  if (!entryFound) {
+    return next(new AppError(404, "Entry not found in cart"));
+  }
+
+  await cart.save();
+
+  await cart.populate({
+    path: "cartItems.product",
+    select: "title imageCover price priceAfterDiscount author",
+  });
+
+  res.status(200).json({
+    status: "success",
+    message: "Cart entry removed successfully",
+    data: {
+      cartItems: cart.cartItems.map((item) => ({
+        productId: item.product._id,
+        title: item.product.title,
+        author: item.product.author,
+        image: item.product.imageCover,
+        price: item.product.price,
+        quantity: item.quantity,
+        subTotal: item.subTotalPrice,
+        itemEntries: item.itemEntry,
+      })),
+      totalPrice: cart.totalPrice,
+      totalQuantity: cart.totalQuantity,
+    },
+  });
+});
+
 // Remove item from cart
 const removeFromCart = expressAsyncHandler(async (req, res, next) => {
   const { productId } = req.params;
@@ -236,7 +332,7 @@ const removeFromCart = expressAsyncHandler(async (req, res, next) => {
     return next(new AppError(400, "ProductId is required"));
   }
   //   const userId = req.user.id;
-  const userId = "6868bb92b26da1d9f5c66586";
+  const userId = "6869e1b80fcf4586fc1989f2";
 
   const cart = await Cart.findOne({ user: userId });
   if (!cart) {
@@ -275,7 +371,7 @@ const removeFromCart = expressAsyncHandler(async (req, res, next) => {
 // Clear entire cart
 const clearCart = expressAsyncHandler(async (req, res, next) => {
   //   const userId = req.user.id;
-  const userId = "6868bb92b26da1d9f5c66586";
+  const userId = "6869e1b80fcf4586fc1989f2";
 
   const cart = await Cart.findOne({ user: userId });
   if (!cart) {
@@ -296,6 +392,7 @@ module.exports = {
   addToCart,
   getCart,
   updateCartItem,
+  removeCartEntryById,
   removeFromCart,
   clearCart,
 };
