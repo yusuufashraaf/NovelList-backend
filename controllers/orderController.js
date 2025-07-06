@@ -17,7 +17,7 @@ exports.getSuccessfulOrdersByUser = async (req, res) => {
     // Now populate
     await Order.populate(orders, {
       path: "books.book",
-      select: "title author price imageCover",
+      select: "title author price imageCover pdfLink",
     });
 
     res.status(200).json({
