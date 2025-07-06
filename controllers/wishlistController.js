@@ -7,7 +7,7 @@ const Product = require("../models/product");
 const addToWishlist = expressAsyncHandler(async (req, res, next) => {
   const { productId } = req.body;
   //   const userId = req.user.id;
-  const userId = "6868bb92b26da1d9f5c66586";
+  const userId = req.user.id;
 
   // Validate product exists
   const product = await Product.findById(productId);
@@ -55,7 +55,7 @@ const addToWishlist = expressAsyncHandler(async (req, res, next) => {
 // Get user's wishlist
 const getWishlist = expressAsyncHandler(async (req, res, next) => {
   //   const userId = req.user.id;
-  const userId = "6868bb92b26da1d9f5c66586";
+  const userId = req.user.id;
 
   const wishlist = await Wishlist.findOne({ user: userId }).populate({
     path: "wishlistItems",
@@ -63,7 +63,12 @@ const getWishlist = expressAsyncHandler(async (req, res, next) => {
   });
 
   if (!wishlist) {
-    return next(new AppError(404, "Wishlist not found"));
+    return res.status(200).json({
+      status: "success",
+      data: {
+        wishlist: [],
+      },
+    });
   }
 
   res.status(200).json({
@@ -84,7 +89,7 @@ const getWishlist = expressAsyncHandler(async (req, res, next) => {
 const removeFromWishlist = expressAsyncHandler(async (req, res, next) => {
   const { productId } = req.body;
   //   const userId = req.user.id;
-  const userId = "6868bb92b26da1d9f5c66586";
+  const userId = req.user.id;
 
   const wishlist = await Wishlist.findOne({ user: userId });
   if (!wishlist) {

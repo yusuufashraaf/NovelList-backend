@@ -1,13 +1,24 @@
 const Order = require("../models/order.model");
-
+require("../models/product");
 exports.getSuccessfulOrdersByUser = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user._id;
 
     const orders = await Order.find({
       user: userId,
-      status: "success", // or whatever your "completed" status is called
-    }).populate("books.book", "title author price imageCover");
+      status: "delivered",
+    });
+
+    // Log book IDs
+    orders.forEach((order) => {
+      order.books.forEach((item) => {});
+    });
+
+    // Now populate
+    await Order.populate(orders, {
+      path: "books.book",
+      select: "title author price imageCover pdfLink",
+    });
 
     res.status(200).json({
       status: "success",
