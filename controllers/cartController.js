@@ -106,6 +106,7 @@ const addToCart = expressAsyncHandler(async (req, res, next) => {
 const getCart = expressAsyncHandler(async (req, res, next) => {
   // In production replace with: const userId = req.user.id;
   const userId = req.user.id;
+  // console.log(req);
 
   // 1) Fetch cart + product data
   const cart = await Cart.findOne({ user: userId }).populate({
