@@ -248,8 +248,10 @@ const removeFromCart = expressAsyncHandler(async (req, res, next) => {
   );
   if (itemToRemove) {
     const product = await Product.findById(productId);
-    product.quantity += itemToRemove.quantity;
-    await product.save();
+    if (product) {
+      product.quantity += itemToRemove.quantity;
+      await product.save();
+    }
   }
 
   cart.cartItems = cart.cartItems.filter(
