@@ -1,6 +1,6 @@
 const expressAsyncHandler = require("express-async-handler");
 const slugify = require("slugify");
-const ApiFeatures = require('../utils/apiFeature');
+const ApiFeatures = require("../utils/apiFeature");
 const AppError = require("../utils/AppError");
 const Product = require("../models/product");
 const Category = require("../models/category");
@@ -12,13 +12,15 @@ const cloudinary = require("cloudinary").v2;
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith("image") || file.mimetype === "application/pdf") {
+    if (
+        file.mimetype.startsWith("image") ||
+        file.mimetype === "application/pdf"
+    ) {
         cb(null, true);
     } else {
         cb(new AppError(400, "Please upload only images or PDF files."));
     }
 };
-
 
 const upload = multer({
     storage: multerStorage,
@@ -28,11 +30,107 @@ const upload = multer({
 const uploadProductFiles = upload.fields([
     { name: "imageCover", maxCount: 1 },
     { name: "images", maxCount: 5 },
-    { name: "pdfLink", maxCount: 1 }
+    { name: "pdfLink", maxCount: 1 },
 ]);
+const streamifier = require("streamifier");
+
+// PDF uploader (clean version)
+const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
+    const baseName = originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
+    const finalFileName = `${baseName}.pdf`;
+
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            {
+                folder: "products",
+                resource_type: "raw",
+                public_id: `${Date.now()}-${finalFileName}`,
+                use_filename: true,
+                unique_filename: false,
+                type: "upload",
+            },
+            (error, result) => {
+                if (error) return reject(new AppError(500, "PDF Upload Failed"));
+                // Force download link
+                const downloadUrl = result.secure_url.replace(
+                  '/raw/upload/',
+                  '/raw/upload/fl_attachment/'
+                );
+                resolve(downloadUrl);
+            }
+        );
+        streamifier.createReadStream(pdfBuffer).pipe(uploadStream);
+    });
+};
 
 
-// const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
+// Main Middleware
+const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
+    const files = req.files || {};
+
+    // 1. Upload imageCover
+    if (files.imageCover?.[0]) {
+        const img = files.imageCover[0];
+        const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
+
+        const result = await new Promise((resolve, reject) => {
+            const stream = cloudinary.uploader.upload_stream(
+                {
+                    folder: "products",
+                    public_id: `${Date.now()}-${cleanedName}`,
+                },
+                (error, result) => {
+                    if (error) return reject(new AppError(500, "Image Cover Upload Failed"));
+                    resolve(result);
+                }
+            );
+            streamifier.createReadStream(img.buffer).pipe(stream);
+        });
+
+        req.body.imageCover = result.secure_url;
+    }
+
+    // 2. Upload PDF
+    if (files.pdfLink?.[0]) {
+        const pdf = files.pdfLink[0];
+        try {
+            req.body.pdfLink = await uploadPDFToCloudinary(pdf.buffer, pdf.originalname);
+        } catch (err) {
+            return next(err);
+        }
+    }
+
+    // 3. Upload multiple images
+    if (Array.isArray(files.images)) {
+        req.body.images = [];
+
+        await Promise.all(
+            files.images.map((img) => {
+                return new Promise((resolve, reject) => {
+                    const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
+
+                    const stream = cloudinary.uploader.upload_stream(
+                        {
+                            folder: "products",
+                            public_id: `${Date.now()}-${cleanedName}`,
+                        },
+                        (error, result) => {
+                            if (error) return reject(new AppError(500, "Image Upload Failed"));
+                            req.body.images.push(result.secure_url);
+                            resolve();
+                        }
+                    );
+
+                    streamifier.createReadStream(img.buffer).pipe(stream);
+                });
+            })
+        );
+    }
+
+    next();
+});
+
+
 //     // 1. Upload imageCover to Cloudinary
 //     if (req.files.imageCover) {
 //         const result = await cloudinary.uploader.upload(
@@ -78,48 +176,126 @@ const uploadProductFiles = upload.fields([
 //     next();
 // });
 
-const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
-    const files = req.files || {};
+// const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
+//   const files = req.files || {};
 
-    // 1. Upload imageCover
-    if (files.imageCover?.[0]) {
-        const result = await cloudinary.uploader.upload(
-            `data:${files.imageCover[0].mimetype};base64,${files.imageCover[0].buffer.toString('base64')}`,
-            { folder: "products" }
-        );
-        req.body.imageCover = result.secure_url;
-    }
+//   // 1. Upload imageCover
+//   if (files.imageCover?.[0]) {
+//     const img = files.imageCover[0];
+//     const result = await cloudinary.uploader.upload(
+//       `data:${img.mimetype};base64,${img.buffer.toString("base64")}`,
+//       {
+//         folder: "products",
+//         public_id: `${Date.now()}-${img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_")}`,
+//       }
+//     );
+//     req.body.imageCover = result.secure_url;
+//   }
 
-    // 2. Upload pdfLink
-    if (files.pdfLink?.[0]) {
-        const pdf = files.pdfLink[0];
-        const result = await cloudinary.uploader.upload(
-            `data:${pdf.mimetype};base64,${pdf.buffer.toString('base64')}`,
-            {
-                folder: "products",
-                resource_type: "raw",
-                public_id: `products/${Date.now()}-${pdf.originalname.replace(/\.[^/.]+$/, "")}`,
-            }
-        );
-        req.body.pdfLink = result.secure_url;
-    }
+//   // 2. Upload pdfLink
+//   if (files.pdfLink?.[0]) {
+//     const pdf = files.pdfLink[0];
+//     const cleanedName = pdf.originalname
+//       .replace(/\.[^/.]+$/, "")
+//       .replace(/\s+/g, "_");
 
-    // 3. Upload images[]
-    if (Array.isArray(files.images)) {
-        req.body.images = [];
-        await Promise.all(
-            files.images.map(async (img) => {
-                const result = await cloudinary.uploader.upload(
-                    `data:${img.mimetype};base64,${img.buffer.toString('base64')}`,
-                    { folder: "products" }
-                );
-                req.body.images.push(result.secure_url);
-            })
-        );
-    }
 
-    next();
-});
+
+//      const result = await cloudinary.uploader.upload(
+//          `data:${pdf.mimetype};base64,${pdf.buffer.toString("base64")}`,
+//          {
+//              folder: "products",
+//              resource_type:"raw",   // لأنه PDF
+//              public_id: `${Date.now()}-${cleanedName}.pdf`, // بدون .pdf يدوي
+//          }
+//      );
+
+//      req.body.pdfLink = result.secure_url.replace('/upload/', '/upload/fl_attachment/');
+//   }
+
+//   // 3. Upload images[]
+//   if (Array.isArray(files.images)) {
+//     req.body.images = [];
+
+//     await Promise.all(
+//       files.images.map(async (img) => {
+//         const cleanedName = img.originalname
+//           .replace(/\.[^/.]+$/, "")
+//           .replace(/\s+/g, "_");
+
+//         const result = await cloudinary.uploader.upload(
+//           `data:${img.mimetype};base64,${img.buffer.toString("base64")}`,
+//           {
+//             folder: "products",
+//             public_id: `${Date.now()}-${cleanedName}`,
+//           }
+//         );
+//         req.body.images.push(result.secure_url);
+//       })
+//     );
+//   }
+
+//   next();
+// });
+
+// const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
+//     const files = req.files || {};
+
+//     // 1. Upload imageCover
+//     if (files.imageCover?.[0]) {
+//         const img = files.imageCover[0];
+//         const result = await cloudinary.uploader.upload(
+//             `data:${img.mimetype};base64,${img.buffer.toString("base64")}`,
+//             {
+//                 folder: "products",
+//                 public_id: `${Date.now()}-${img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_")}`,
+//             }
+//         );
+//         req.body.imageCover = result.secure_url;
+//     }
+
+//     // 2. Upload pdfLink
+//     if (files.pdfLink?.[0]) {
+//         const pdf = files.pdfLink[0];
+//         const cleanedName = pdf.originalname
+//             .replace(/\.[^/.]+$/, "")
+//             .replace(/\s+/g, "_");
+
+//         const result = await cloudinary.uploader.upload(
+//             `data:${pdf.mimetype};base64,${pdf.buffer.toString("base64")}`,
+//             {
+//                 folder: "products",
+//                 public_id: `${Date.now()}-${cleanedName}.pdf`, // بدون .pdf يدوي
+//             }
+//         );
+//         req.body.pdfLink = result.secure_url.replace("/upload/", "/upload/fl_attachment/");
+//     }
+
+//     // ✅ 3. Upload images[]
+//     if (Array.isArray(files.images)) {
+//         req.body.images = [];
+
+//         await Promise.all(
+//             files.images.map(async (img) => {
+//                 const cleanedName = img.originalname
+//                     .replace(/\.[^/.]+$/, "")
+//                     .replace(/\s+/g, "_");
+
+//                 const result = await cloudinary.uploader.upload(
+//                     `data:${img.mimetype};base64,${img.buffer.toString("base64")}`,
+//                     {
+//                         folder: "products",
+//                         public_id: `${Date.now()}-${cleanedName}`,
+//                     }
+//                 );
+//                 req.body.images.push(result.secure_url);
+//             })
+//         );
+//     }
+
+//     // ✅ لازم يكون بره كل if
+//     next();
+// });
 
 const addproduct = expressAsyncHandler(async (req, res, next) => {
     const { body } = req;
@@ -156,8 +332,6 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
     });
 });
 
-
-
 const getAllProducts = expressAsyncHandler(async (req, res, next) => {
     // 1. Build query
     const features = new ApiFeatures(Product.find(), req.query);
@@ -166,7 +340,7 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
     await features.filter();
 
     // Apply search
-    features.search('Product');
+    features.search("Product");
 
     // Count documents *before* pagination to get total for pagination
     // You need to clone the query to count without limit/skip
@@ -182,7 +356,10 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
     features.limitFields();
 
     // 2. Execute query
-    const products = await features.mongooseQuery.populate({ path: "category", select: "name -_id" });
+    const products = await features.mongooseQuery.populate({
+        path: "category",
+        select: "name -_id",
+    });
 
     // 3. Send response
     res.status(200).json({
@@ -197,8 +374,6 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
         data: products,
     });
 });
-
-
 
 const getproduct = expressAsyncHandler(async (req, res, next) => {
     const { id } = req.params;
@@ -227,13 +402,12 @@ const UpdateProduct = expressAsyncHandler(async (req, res, next) => {
     }
 
     if (body.subcategory && typeof body.subcategory === "string") {
-    try {
-        body.subcategory = JSON.parse(body.subcategory);
-    } catch (err) {
-        return next(new AppError(400, "Invalid subcategory format"));
+        try {
+            body.subcategory = JSON.parse(body.subcategory);
+        } catch (err) {
+            return next(new AppError(400, "Invalid subcategory format"));
+        }
     }
-}
-
 
     const product = await Product.findByIdAndUpdate(id, body, {
         new: true,
@@ -250,10 +424,6 @@ const UpdateProduct = expressAsyncHandler(async (req, res, next) => {
         data: product,
     });
 });
-
-
-
-
 
 const deleteProduct = expressAsyncHandler(async (req, res, next) => {
     const { id } = req.params;
