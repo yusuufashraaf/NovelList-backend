@@ -1,34 +1,32 @@
-const Comment = require('../models/comment');
-const mongoose = require('mongoose');
-const UserAuth =require('../models/userAuthModel'); 
-const createComment = async(comment)=>{
-    try { 
-         const savedComment = await comment.save();
-        return savedComment; 
-    } catch (error) {
-        console.error("Error saving comment in controller:", error);
-        throw error; 
-    }
-}
+const Comment = require("../models/comment");
+const mongoose = require("mongoose");
+const UserAuth = require("../models/userAuthModel");
+const createComment = async (comment) => {
+  try {
+    const savedComment = await comment.save();
+    return savedComment;
+  } catch (error) {
+    console.error("Error saving comment in controller:", error);
+    throw error;
+  }
+};
 
-
-
-const listComments = async (id)=>{
-    try {
-        const comments = await Comment.find({ bookId: id })
-        .populate('userId','name');
-        return comments
-    } catch (error) {
-        throw error; 
-    }
-
-
-}
-const getAverageReview =(comments)=>{
-    if (!comments || comments.length === 0) return 0;
-    const sumReviews = comments.reduce((sum, comment) => sum + comment.rate, 0);
-    return sumReviews/comments.length;
-}
+const listComments = async (id) => {
+  try {
+    const comments = await Comment.find({ bookId: id }).populate(
+      "userId",
+      "name"
+    );
+    return comments;
+  } catch (error) {
+    throw error;
+  }
+};
+const getAverageReview = (comments) => {
+  if (!comments || comments.length === 0) return 0;
+  const sumReviews = comments.reduce((sum, comment) => sum + comment.rate, 0);
+  return sumReviews / comments.length;
+};
 const deleteComment = async (commentId, userId) => {
   try {
     const isOwner = await CheckAuthorityOfComment(commentId, userId);
@@ -41,7 +39,6 @@ const deleteComment = async (commentId, userId) => {
 
     const deleted = await Comment.findByIdAndDelete(commentId);
     return deleted;
-
   } catch (error) {
     throw error;
   }
@@ -52,7 +49,7 @@ const CheckAuthorityOfComment = async (commentId, userId) => {
     const comment = await Comment.findById(commentId);
     if (!comment) return false;
     console.log(comment);
-    
+
     // Compare userId with comment.userId (both as strings)
     return comment.userId.toString() === userId.toString();
   } catch (error) {
@@ -60,9 +57,23 @@ const CheckAuthorityOfComment = async (commentId, userId) => {
     return false;
   }
 };
-module.exports ={
-    createComment,
-    listComments,
-    deleteComment,
-    getAverageReview
-}
+
+const getUserComments = async (userId) => {
+  try {
+    const comments = await Comment.find({ userId }).populate(
+      "bookId",
+      "title author imageCover"
+    ); 
+    return comments;
+  } catch (error) {
+    throw error;
+  }
+};
+
+module.exports = {
+  createComment,
+  listComments,
+  deleteComment,
+  getAverageReview,
+  getUserComments,
+};
