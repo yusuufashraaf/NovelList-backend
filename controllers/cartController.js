@@ -266,65 +266,6 @@ const updateCartItem = expressAsyncHandler(async (req, res, next) => {
   });
 });
 
-// Remove cart entry by id
-const removeCartEntryById = expressAsyncHandler(async (req, res, next) => {
-  const { entryId } = req.params;
-  const userId = "6869e1b80fcf4586fc1989f2"; // Replace with req.user.id in production
-
-  const cart = await Cart.findOne({ user: userId });
-  if (!cart) {
-    return next(new AppError(404, "Cart not found"));
-  }
-
-  let entryFound = false;
-  // Loop through cartItems to find and remove the entry
-  cart.cartItems.forEach((item) => {
-    const initialLength = item.itemEntry.length;
-    item.itemEntry = item.itemEntry.filter(
-      (entry) => entry._id.toString() !== entryId
-    );
-    if (item.itemEntry.length < initialLength) {
-      entryFound = true;
-      // Update quantity and subtotal
-      item.quantity = item.itemEntry.length;
-      item.subTotalPrice = item.quantity * item.price;
-    }
-  });
-
-  // Remove cartItems with zero quantity
-  cart.cartItems = cart.cartItems.filter((item) => item.quantity > 0);
-
-  if (!entryFound) {
-    return next(new AppError(404, "Entry not found in cart"));
-  }
-
-  await cart.save();
-
-  await cart.populate({
-    path: "cartItems.product",
-    select: "title imageCover price priceAfterDiscount author",
-  });
-
-  res.status(200).json({
-    status: "success",
-    message: "Cart entry removed successfully",
-    data: {
-      cartItems: cart.cartItems.map((item) => ({
-        productId: item.product._id,
-        title: item.product.title,
-        author: item.product.author,
-        image: item.product.imageCover,
-        price: item.product.price,
-        quantity: item.quantity,
-        subTotal: item.subTotalPrice,
-        itemEntries: item.itemEntry,
-      })),
-      totalPrice: cart.totalPrice,
-      totalQuantity: cart.totalQuantity,
-    },
-  });
-});
-
 // Remove item from cart
 const removeFromCart = expressAsyncHandler(async (req, res, next) => {
   const { productId } = req.params;
@@ -392,7 +333,6 @@ module.exports = {
   addToCart,
   getCart,
   updateCartItem,
-  removeCartEntryById,
   removeFromCart,
   clearCart,
 };
