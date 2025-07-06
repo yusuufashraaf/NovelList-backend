@@ -3,11 +3,11 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const qs = require("qs");
-const helmet = require("helmet");
-const sanitizeMongoInput = require("express-mongo-sanitize");
-const xss = require("xss-clean");
-const hpp = require("hpp");
-const limiter = require("express-rate-limit");
+// const helmet = require("helmet");
+// const sanitizeMongoInput = require("express-mongo-sanitize");
+// const xss = require("xss-clean");
+// const hpp = require("hpp");
+// const limiter = require("express-rate-limit");
 
 const cloudinary = require("cloudinary").v2;
 const orderRouter = require("../routes/orderRoute");
@@ -31,11 +31,11 @@ const swaggerDocument = require("../swagger.json");
 const app = express();
 
 app.use(cors());
-app.use(limiter);
-app.use(helmet());
-app.use(sanitizeMongoInput);
-app.use(xss());
-app.use(hpp());
+// app.use(limiter);
+// app.use(helmet());
+// app.use(sanitizeMongoInput);
+// app.use(xss());
+// app.use(hpp());
 
 app.use(morgan("dev"));
 
