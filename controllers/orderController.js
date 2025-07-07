@@ -50,3 +50,63 @@ exports.getAllOrders = async (req,res)=>{
     });
   }
 }
+exports.getSoldBooksPerCategory = async (req,res) => {
+  try {
+    const result = await Order.aggregate([
+    {
+      $match: {
+        status: { $ne: 'cancelled' } 
+      }
+    },
+
+    { $unwind: '$books' },
+
+    {
+      $lookup: {
+        from: 'products',
+        localField: 'books.book',
+        foreignField: '_id',
+        as: 'bookDetails'
+      }
+    },
+    { $unwind: '$bookDetails' },
+
+    {
+      $group: {
+        _id: '$bookDetails.category',
+        totalSold: { $sum: '$books.quantity' }
+      }
+    },
+
+    {
+      $lookup: {
+        from: 'categories',
+        localField: '_id',
+        foreignField: '_id',
+        as: 'categoryInfo'
+      }
+    },
+    { $unwind: '$categoryInfo' },
+
+    {
+      $project: {
+        _id: 0,
+        categoryid: '$categoryInfo._id', 
+        categoryname: '$categoryInfo.name', 
+        totalSold: 1
+      }
+    }
+  ]);
+    res.status(200).send({data:result})
+  } catch (error) {
+
+      res.status(500).json({
+      status: "error",
+      message: "Failed to retrieve  orders",
+      error: error.message,
+    })
+
+
+  }
+  
+};
