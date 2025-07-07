@@ -33,3 +33,20 @@ exports.getSuccessfulOrdersByUser = async (req, res) => {
     });
   }
 };
+exports.getAllOrders = async (req,res)=>{
+  try {
+    const orders = await Order.find({});
+
+     res.status(200).json({
+      status: "success",
+      results: orders.length,
+      data: orders,
+    });
+  } catch (error) {
+      res.status(500).json({
+      status: "error",
+      message: "Failed to retrieve successful orders",
+      error: error.message,
+    });
+  }
+}

@@ -22,7 +22,7 @@ const Authenticate = async (req, res, next) => {
 
   const user = await User.verifyUser(checkToken);
   res.locals.userid =user._id;
-
+  
   if (!user) {
     return res
       .status(401)

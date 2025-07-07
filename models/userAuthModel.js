@@ -89,4 +89,23 @@ userAuthSchema.statics.verifyUser = async function(token){
     }
 
 }
+userAuthSchema.statics.verifyAdmin = async function(token){
+    const User = this;
+    try {
+        const {id } = await jwtVerify(token,process.env.JWT_SECRET);
+        const admin = await User.findById(id);
+
+       if (!admin || admin.role !== "admin") {
+            const err = new Error("You are not authorized");
+            err.status = 401;
+            throw err;
+        }
+        return admin;
+
+    } catch (error) {
+        const Errr = new Error("You are not Authorized");
+        Errr.status = 401; 
+        throw Errr;
+    }
+}
 module.exports = mongoose.model("UserAuth", userAuthSchema);
