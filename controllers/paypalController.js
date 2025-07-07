@@ -8,6 +8,7 @@ const Order = require('../models/order.model');
 const createOrder = async (req, res) => {
     try {
         const { books, totalPrice, shippingAddress, paymentMethod } = req.body;
+      
         const userId = res.locals.userid;
 
         
