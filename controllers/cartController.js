@@ -104,9 +104,7 @@ const addToCart = expressAsyncHandler(async (req, res, next) => {
 
 // Get user's cart ─ cleans expired entries on the fly
 const getCart = expressAsyncHandler(async (req, res, next) => {
-  // In production replace with: const userId = req.user.id;
   const userId = req.user.id;
-  // console.log(req);
 
   // 1) Fetch cart + product data
   const cart = await Cart.findOne({ user: userId }).populate({
@@ -125,13 +123,14 @@ const getCart = expressAsyncHandler(async (req, res, next) => {
 
   // 2) Remove expired entries & recalc quantities/sub-totals
   let cartChanged = false;
+  const currentTime = new Date(); // Use Date object for consistency
 
   for (const item of cart.cartItems) {
     const before = item.itemEntry.length;
 
-    // keep only still-valid entries
+    // Keep only still-valid entries - more explicit comparison
     item.itemEntry = item.itemEntry.filter(
-      (entry) => entry.expiresAt > Date.now()
+      (entry) => new Date(entry.expiresAt) > currentTime
     );
 
     const expiredCount = before - item.itemEntry.length;
@@ -146,14 +145,24 @@ const getCart = expressAsyncHandler(async (req, res, next) => {
       if (product) {
         product.quantity += expiredCount;
         await product.save();
+        console.log(`Restored ${expiredCount} units to product ${product._id}`);
       }
     }
   }
 
   // Remove items whose quantity became 0
   if (cartChanged) {
+    const itemsBeforeFilter = cart.cartItems.length;
     cart.cartItems = cart.cartItems.filter((item) => item.quantity > 0);
+    const itemsRemoved = itemsBeforeFilter - cart.cartItems.length;
+
+    if (itemsRemoved > 0) {
+      console.log(`Removed ${itemsRemoved} empty cart items`);
+    }
+
     await cart.save();
+
+    // Re-populate after changes
     await cart.populate({
       path: "cartItems.product",
       select: "_id title imageCover price priceAfterDiscount quantity author",
