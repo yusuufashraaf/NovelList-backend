@@ -146,17 +146,14 @@ exports.deactivateUser = async (req, res) => {
 exports.changeRole = async (req, res) => {
   try {
     const idOfUser = req.params.id;
-
-    const user = await User.findByIdAndUpdate(
-      idOfUser,
-      { role: "admin" }, 
-      { new: true }      
-    );
-
+    const user = await User.findById(idOfUser);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
+    const newRole = user.role === 'admin' ? 'user' : 'admin';
+    user.role = newRole;
+    await user.save();
+ 
     res.status(200).json({
       message: "Role updated successfully",
       user
