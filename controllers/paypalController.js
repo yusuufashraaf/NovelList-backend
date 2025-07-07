@@ -8,8 +8,8 @@ const Order = require('../models/order.model');
 const createOrder = async (req, res) => {
     try {
         const { books, totalPrice, shippingAddress, paymentMethod } = req.body;
-        const userId = res.locals.userId;
-        console.log(userId);
+        const userId = res.locals.userid;
+
         
         const trxRef = uuidv4();
         const orderNumber = req.body.orderNumber || `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
