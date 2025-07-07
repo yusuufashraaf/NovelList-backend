@@ -6,15 +6,6 @@ const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
 
 // Validation rules for creating an order
 const validateCreateOrder = [
-  body('user')
-    .notEmpty()
-    .withMessage('User is required')
-    .custom((value) => {
-      if (!isValidObjectId(value)) {
-        throw new Error('User must be a valid ObjectId');
-      }
-      return true;
-    }),
 
   // Books array validation
   body('books')
@@ -105,6 +96,8 @@ const validateCreateOrder = [
 // Middleware to handle validation results
 const handleValidationErrors = (req, res, next) => {
   const errors = validationResult(req);
+  console.log(errors);
+  
   if (!errors.isEmpty()) {
     return res.status(400).json({
       success: false,
