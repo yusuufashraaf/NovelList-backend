@@ -6,9 +6,14 @@ const Product = require("../models/product");
 const commentController = require("../controllers/commentController");
 const validateComment = require("../middlewares/validateComment");
 const Authenticate = require("../middlewares/Authenticate");
-router.post("/create", validateComment, async (req, res) => {
+router.post("/create",Authenticate ,validateComment, async (req, res) => {
   try {
-    const comment = new Comment(req.body);
+    const comment = new Comment({
+        ...req.body,
+        userId: res.locals.userid,
+    });
+    console.log(comment);
+    
     const savedComment = await commentController.createComment(comment);
     console.log(savedComment);
 
