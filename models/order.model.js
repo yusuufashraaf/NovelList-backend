@@ -5,7 +5,7 @@ const { ObjectId } = Schema.Types;
 
 const orderSchema = new Schema({
 //   _id: ObjectId,
-  user: {
+  userId: {
     type: ObjectId,
     ref: 'User',
     required: true

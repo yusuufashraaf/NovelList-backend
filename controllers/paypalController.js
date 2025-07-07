@@ -7,8 +7,10 @@ const Order = require('../models/order.model');
 
 const createOrder = async (req, res) => {
     try {
-        const { user, books, totalPrice, shippingAddress, paymentMethod } = req.body;
-
+        const { books, totalPrice, shippingAddress, paymentMethod } = req.body;
+        const userId = res.locals.userId;
+        console.log(userId);
+        
         const trxRef = uuidv4();
         const orderNumber = req.body.orderNumber || `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
 
@@ -66,7 +68,7 @@ const createOrder = async (req, res) => {
 
         // Save order to database with PayPal reference
         const newOrder = new Order({
-            user,
+            userId,
             books,
             totalPrice,
             status: 'pending',
@@ -99,7 +101,7 @@ const createOrder = async (req, res) => {
         if (req.body.user && req.body.books && req.body.totalPrice) {
             try {
                 const failedOrder = new Order({
-                    user: req.body.user,
+                    userId: res.locals.userId,
                     books: req.body.books,
                     totalPrice: req.body.totalPrice,
                     status: 'cancelled',
