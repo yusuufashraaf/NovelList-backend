@@ -8,7 +8,8 @@ const {
   deleteUser,
   changePassword,
   loginUser,
-  deactivateUser
+  deactivateUser,
+  changeRole
 } = require("../controllers/userController");
 
 const { createUserValidator } = require("../middlewares/userValidator");
@@ -18,6 +19,8 @@ const validateMongoId = require("../middlewares/validatorMiddleware");
 const { protect } = require("../controllers/authController");
 const {allowedTo} = require("../controllers/authController");
 const { getMe } = require("../controllers/authController");
+const AuthenticateAdmin = require("../middlewares/AuthenticateAdmin")
+
 const router = express.Router();
 
 router
@@ -45,4 +48,6 @@ router
   .route("/deactivate/:id")
   .patch(protect, deactivateUser);
 
+
+router.post("/changerole/:id",AuthenticateAdmin,changeRole);
 module.exports = router;

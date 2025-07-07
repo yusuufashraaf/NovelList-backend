@@ -143,3 +143,25 @@ exports.deactivateUser = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+exports.changeRole = async (req, res) => {
+  try {
+    const idOfUser = req.params.id;
+
+    const user = await User.findByIdAndUpdate(
+      idOfUser,
+      { role: "admin" }, 
+      { new: true }      
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Role updated successfully",
+      user
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Something went wrong", details: error.message });
+  }
+};
