@@ -32,9 +32,9 @@ productRouter
         uploadProductFiles,
         manualPdfFileValidator,
         manualImageCoverValidator,
+        uploadImagesToCloudinary,
         parseSubcategoryArray,
         addProductValidator,
-        uploadImagesToCloudinary,
         addproduct);
 
 productRouter.get("/genres", getUniqueGenres);

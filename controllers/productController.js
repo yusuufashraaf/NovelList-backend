@@ -54,7 +54,7 @@ const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
                 // Force download link
                 const downloadUrl = result.secure_url.replace(
                     '/raw/upload/',
-                  '/raw/upload/fl_attachment/'
+                    '/raw/upload/fl_attachment/'
                 );
                 resolve(downloadUrl);
             }
@@ -65,76 +65,178 @@ const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
 
 
 // Main Middleware
+// const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
+//     const files = req.files || {};
+
+//     // 1. Upload imageCover
+//     if (files.imageCover?.[0]) {
+//         const img = files.imageCover[0];
+//         const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
+
+//         const result = await new Promise((resolve, reject) => {
+//             const stream = cloudinary.uploader.upload_stream(
+//                 {
+//                     folder: "products",
+//                     public_id: `${Date.now()}-${cleanedName}`,
+//                 },
+//                 (error, result) => {
+//                     if (error) return reject(new AppError(500, "Image Cover Upload Failed"));
+//                     resolve(result);
+//                 }
+//             );
+//             streamifier.createReadStream(img.buffer).pipe(stream);
+//         });
+
+//         req.body.imageCover = result.secure_url;
+//     }
+
+//     // 2. Upload PDF
+//     if (files.pdfLink?.[0]) {
+//         const pdf = files.pdfLink[0];
+//         try {
+//             req.body.pdfLink = await uploadPDFToCloudinary(pdf.buffer, pdf.originalname);
+//         } catch (err) {
+//             return next(err);
+//         }
+//     }
+
+//     // 3. Upload multiple images
+//     if (Array.isArray(files.images)) {
+//         req.body.images = [];
+
+//         await Promise.all(
+//             files.images.map((img) => {
+//                 return new Promise((resolve, reject) => {
+//                     const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
+
+//                     const stream = cloudinary.uploader.upload_stream(
+//                         {
+//                             folder: "products",
+//                             public_id: `${Date.now()}-${cleanedName}`,
+//                         },
+//                         (error, result) => {
+//                             if (error) return reject(new AppError(500, "Image Upload Failed"));
+//                             req.body.images.push(result.secure_url);
+//                             resolve();
+//                         }
+//                     );
+
+//                     streamifier.createReadStream(img.buffer).pipe(stream);
+//                 });
+//             })
+//         );
+//     }
+
+//     next();
+// });
+
 const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
     const files = req.files || {};
+    console.log("🟡 Starting Cloudinary uploads...");
+    console.log("📁 Files received:", Object.keys(files));
 
     // 1. Upload imageCover
     if (files.imageCover?.[0]) {
         const img = files.imageCover[0];
-        const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
+        console.log("📤 Uploading imageCover:", img.originalname);
+        console.log("📁 imageCover size:", img.size);
+        console.log("📁 imageCover mimetype:", img.mimetype);
+        console.log("📁 imageCover buffer length:", img.buffer?.length);
 
-        const result = await new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-                {
-                    folder: "products",
-                    public_id: `${Date.now()}-${cleanedName}`,
-                },
-                (error, result) => {
-                    if (error) return reject(new AppError(500, "Image Cover Upload Failed"));
-                    resolve(result);
-                }
-            );
-            streamifier.createReadStream(img.buffer).pipe(stream);
-        });
-
-        req.body.imageCover = result.secure_url;
-    }
-
-    // 2. Upload PDF
-    if (files.pdfLink?.[0]) {
-        const pdf = files.pdfLink[0];
         try {
-            req.body.pdfLink = await uploadPDFToCloudinary(pdf.buffer, pdf.originalname);
+            const result = await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    {
+                        folder: "products",
+                        public_id: `${Date.now()}-${img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_")}`,
+                    },
+                    (error, result) => {
+                        if (error) {
+                            console.error("🚨 Cloudinary imageCover upload error (FULL):", error);
+                            return reject(new AppError(500, `Image Cover Upload Failed: ${error.message || error}`));
+                        }
+                        resolve(result);
+                    }
+                );
+                streamifier.createReadStream(img.buffer).pipe(stream);
+            });
+
+            req.body.imageCover = result.secure_url;
         } catch (err) {
             return next(err);
         }
     }
 
-    // 3. Upload multiple images
-    if (Array.isArray(files.images)) {
-        req.body.images = [];
+    // 2. Upload PDF
+    if (files.pdfLink?.[0]) {
+        const pdf = files.pdfLink[0];
+        console.log("📤 Uploading PDF:", pdf.originalname);
+        console.log("📁 pdfLink size:", pdf.size);
+        console.log("📁 pdfLink mimetype:", pdf.mimetype);
+        console.log("📁 pdfLink buffer length:", pdf.buffer?.length);
 
-        await Promise.all(
-            files.images.map((img) => {
-                return new Promise((resolve, reject) => {
-                    const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
-
-                    const stream = cloudinary.uploader.upload_stream(
-                        {
-                            folder: "products",
-                            public_id: `${Date.now()}-${cleanedName}`,
-                        },
-                        (error, result) => {
-                            if (error) return reject(new AppError(500, "Image Upload Failed"));
-                            req.body.images.push(result.secure_url);
-                            resolve();
-                        }
-                    );
-
-                    streamifier.createReadStream(img.buffer).pipe(stream);
-                });
-            })
-        );
+        try {
+            req.body.pdfLink = await uploadPDFToCloudinary(pdf.buffer, pdf.originalname);
+        } catch (err) {
+            console.error("🚨 Cloudinary PDF upload error:", err);
+            return next(new AppError(500, "PDF Upload Failed"));
+        }
     }
 
+    // 3. Upload additional images
+    if (Array.isArray(files.images)) {
+        req.body.images = [];
+        console.log(`📤 Uploading ${files.images.length} additional image(s)...`);
+
+        try {
+            await Promise.all(
+                files.images.map((img, index) => {
+                    console.log(`📤 Uploading image ${index + 1}:`, img.originalname);
+                    console.log("📁 image size:", img.size);
+                    console.log("📁 image mimetype:", img.mimetype);
+                    console.log("📁 image buffer length:", img.buffer?.length);
+
+                    return new Promise((resolve, reject) => {
+                        const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
+
+                        const stream = cloudinary.uploader.upload_stream(
+                            {
+                                folder: "products",
+                                public_id: `${Date.now()}-${cleanedName}`,
+                            },
+                            (error, result) => {
+                                if (error) {
+                                    console.error("🚨 Cloudinary image upload error (FULL):", error);
+                                    return reject(new AppError(500, `Image Upload Failed: ${error.message || error}`));
+                                }
+                                req.body.images.push(result.secure_url);
+                                resolve();
+                            }
+                        );
+
+                        streamifier.createReadStream(img.buffer).pipe(stream);
+                    });
+                })
+            );
+        } catch (err) {
+            return next(err);
+        }
+    }
+
+    console.log("✅ All uploads completed successfully.");
     next();
 });
 
 
 
 
+
 const addproduct = expressAsyncHandler(async (req, res, next) => {
     const { body } = req;
+
+    console.log("📦 Creating product with body (initial):");
+    console.dir(body, { depth: null });
+
     if (
         !body.title ||
         !body.price ||
@@ -143,30 +245,56 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
         !body.imageCover ||
         !body.author
     ) {
+        console.error("❌ Missing required fields:", {
+            title: body.title,
+            price: body.price,
+            quantity: body.quantity,
+            category: body.category,
+            imageCover: body.imageCover,
+            author: body.author,
+        });
         return next(new AppError(400, "All required fields must be provided"));
     }
 
-    body.slug = slugify(body.title);
-    const product = await Product.create(body);
+    try {
+        // Parse subcategory if needed
+        if (body.subcategory && typeof body.subcategory === "string") {
+            body.subcategory = JSON.parse(body.subcategory);
+        }
 
-    await product.populate([
-        {
-            path: "category",
-            select: "name  _id",
-        },
-        {
-            path: "subcategory",
-            select: "name  _id",
-        },
-    ]);
-    if (!product) next(new AppError(400, "Product Not Added"));
+        body.slug = slugify(body.title);
 
-    res.status(201).json({
-        status: "success",
-        massage: "Product Added Successfully",
-        data: product,
-    });
+        // Log the body just before saving
+        console.log("📝 Final product body before DB save:");
+        console.dir(body, { depth: null });
+
+        const product = await Product.create(body);
+
+        await product.populate([
+            { path: "category", select: "name _id" },
+            { path: "subcategory", select: "name _id" },
+        ]);
+
+        if (!product) {
+            console.error("❌ Product not created (null returned from DB)");
+            return next(new AppError(400, "Product Not Added"));
+        }
+
+        res.status(201).json({
+            status: "success",
+            message: "Product Added Successfully",
+            data: product,
+        });
+    } catch (err) {
+        console.error("🔥 Product creation error:", err.message);
+        console.error("🔥 Full error object:", err);
+        return next(new AppError(500, `Failed to create product: ${err.message}`));
+    }
 });
+
+
+
+
 
 const getAllProducts = expressAsyncHandler(async (req, res, next) => {
     // 1. Build query

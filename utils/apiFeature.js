@@ -61,7 +61,7 @@ class ApiFeatures {
                 keywordSearchConditions.push(
                     { title: { $regex: keyword, $options: 'i' } },
                     { author: { $regex: keyword, $options: 'i' } },
-                    { description: { $regex: keyword, $options: 'i' } } // <--- تم إضافة هذا السطر
+                    { description: { $regex: keyword, $options: 'i' } } 
                 );
 
                 // 2. Split the keyword into individual words and search for each word
@@ -71,7 +71,7 @@ class ApiFeatures {
                         keywordSearchConditions.push(
                             { title: { $regex: word, $options: 'i' } },
                             { author: { $regex: word, $options: 'i' } },
-                            { description: { $regex: word, $options: 'i' } } // <--- تم إضافة هذا السطر
+                            { description: { $regex: word, $options: 'i' } }
                         );
                     });
                 }
