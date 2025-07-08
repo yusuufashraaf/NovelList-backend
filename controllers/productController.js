@@ -64,72 +64,6 @@ const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
 };
 
 
-// Main Middleware
-// const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
-//     const files = req.files || {};
-
-//     // 1. Upload imageCover
-//     if (files.imageCover?.[0]) {
-//         const img = files.imageCover[0];
-//         const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
-
-//         const result = await new Promise((resolve, reject) => {
-//             const stream = cloudinary.uploader.upload_stream(
-//                 {
-//                     folder: "products",
-//                     public_id: `${Date.now()}-${cleanedName}`,
-//                 },
-//                 (error, result) => {
-//                     if (error) return reject(new AppError(500, "Image Cover Upload Failed"));
-//                     resolve(result);
-//                 }
-//             );
-//             streamifier.createReadStream(img.buffer).pipe(stream);
-//         });
-
-//         req.body.imageCover = result.secure_url;
-//     }
-
-//     // 2. Upload PDF
-//     if (files.pdfLink?.[0]) {
-//         const pdf = files.pdfLink[0];
-//         try {
-//             req.body.pdfLink = await uploadPDFToCloudinary(pdf.buffer, pdf.originalname);
-//         } catch (err) {
-//             return next(err);
-//         }
-//     }
-
-//     // 3. Upload multiple images
-//     if (Array.isArray(files.images)) {
-//         req.body.images = [];
-
-//         await Promise.all(
-//             files.images.map((img) => {
-//                 return new Promise((resolve, reject) => {
-//                     const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
-
-//                     const stream = cloudinary.uploader.upload_stream(
-//                         {
-//                             folder: "products",
-//                             public_id: `${Date.now()}-${cleanedName}`,
-//                         },
-//                         (error, result) => {
-//                             if (error) return reject(new AppError(500, "Image Upload Failed"));
-//                             req.body.images.push(result.secure_url);
-//                             resolve();
-//                         }
-//                     );
-
-//                     streamifier.createReadStream(img.buffer).pipe(stream);
-//                 });
-//             })
-//         );
-//     }
-
-//     next();
-// });
-
 const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
     const files = req.files || {};
     console.log("🟡 Starting Cloudinary uploads...");
@@ -234,9 +168,6 @@ const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
 const addproduct = expressAsyncHandler(async (req, res, next) => {
     const { body } = req;
 
-    console.log("📦 Creating product with body (initial):");
-    console.dir(body, { depth: null });
-
     if (
         !body.title ||
         !body.price ||
@@ -256,7 +187,6 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
         return next(new AppError(400, "All required fields must be provided"));
     }
 
-    try {
         // Parse subcategory if needed
         if (body.subcategory && typeof body.subcategory === "string") {
             body.subcategory = JSON.parse(body.subcategory);
@@ -264,9 +194,6 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
 
         body.slug = slugify(body.title);
 
-        // Log the body just before saving
-        console.log("📝 Final product body before DB save:");
-        console.dir(body, { depth: null });
 
         const product = await Product.create(body);
 
@@ -276,7 +203,6 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
         ]);
 
         if (!product) {
-            console.error("❌ Product not created (null returned from DB)");
             return next(new AppError(400, "Product Not Added"));
         }
 
@@ -285,11 +211,7 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
             message: "Product Added Successfully",
             data: product,
         });
-    } catch (err) {
-        console.error("🔥 Product creation error:", err.message);
-        console.error("🔥 Full error object:", err);
-        return next(new AppError(500, `Failed to create product: ${err.message}`));
-    }
+    
 });
 
 
