@@ -28,10 +28,7 @@ const addProductValidator = [
   check("author")
     .notEmpty()
     .withMessage("Book author is required"),
-  check("sold")
-    .optional()
-    .isNumeric()
-    .withMessage("Book quantity must be a number"),
+  
   check("price")
     .notEmpty()
     .withMessage("Book price is required")
@@ -51,7 +48,9 @@ const addProductValidator = [
       return true;
     }),
 
-  
+  check("imageCover")
+    .notEmpty()
+    .withMessage("Book image cover is required"),
   check("images")
     .optional()
     .isArray()
