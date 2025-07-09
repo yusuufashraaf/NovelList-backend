@@ -6,7 +6,10 @@ const Product = require("../models/product");
 const commentController = require("../controllers/commentController");
 const validateComment = require("../middlewares/validateComment");
 const Authenticate = require("../middlewares/Authenticate");
-router.post("/create",Authenticate ,validateComment, async (req, res) => {
+const validateBought = require("../middlewares/validateBought")
+const validateReviewedBefore = require("../middlewares/validateReviewedBefore")
+const Order = require("../models/order.model")
+router.post("/create",Authenticate ,validateBought,validateReviewedBefore,validateComment, async (req, res) => {
   try {
     const comment = new Comment({
         ...req.body,
@@ -82,6 +85,44 @@ router.get("/user/:userId", async (req, res) => {
     res.json(userComments);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+// /comment/check?userId=${userId}&bookId=${bookId}
+router.get("/check/:bookId",async (req, res) => {
+
+  const { bookId } = req.params;
+  const userId =res.locals.userid;
+  console.log(req.params);
+  
+  try {
+    // Convert IDs
+    const userObjId = new mongoose.Types.ObjectId(userId);
+    const bookObjId = new mongoose.Types.ObjectId(bookId);
+
+    // Check if book is bought
+    const order = await Order.find({
+      userId: userObjId,
+      "books.book": bookObjId
+    });
+
+    const isBought = order.length > 0;
+
+    // Check if user has commented
+    const comment = await Comment.findOne({
+      user: userObjId,
+      book: bookObjId
+    });
+
+    const isReviewed = !!comment;
+
+    res.status(200).json({
+      isBought,
+      isReviewed
+    });
+
+  } catch (err) {
+    console.error("Error in /check route:", err.message);
+    res.status(500).json({ message: "Server error, try again later" });
   }
 });
 
