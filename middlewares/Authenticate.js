@@ -2,6 +2,8 @@ const User = require("./../models/userAuthModel");
 
 const Authenticate = async (req, res, next) => {
   const token = req.headers.authorization;
+  console.log(req.headers);
+  
   console.log(token);
   
   // console.log("token:", token);
