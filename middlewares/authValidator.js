@@ -20,12 +20,17 @@ exports.signupValidator = [
 
   check('password')
     .notEmpty().withMessage('Password is required')
-    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
-    .isLength({ max: 32 }).withMessage('Password must be less than 32 characters long'),
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
+    .isLength({ max: 32 }).withMessage('Password must be less than 32 characters long')
+    .matches(/[a-z]/).withMessage('Password must contain at least one lowercase letter')
+    .matches(/[A-Z]/).withMessage('Password must contain at least one uppercase letter')
+    .matches(/[0-9]/).withMessage('Password must contain at least one number')
+    .matches(/[^a-zA-Z0-9]/).withMessage('Password must contain at least one special character'),
+
 
   check('confirmPassword')
     .notEmpty().withMessage('Confirm Password is required')
-    .isLength({ min: 6 }).withMessage('Confirm Password must be at least 6 characters long')
+    .isLength({ min: 8 }).withMessage('Confirm Password must be at least 8 characters long')
     .isLength({ max: 32 }).withMessage('Confirm Password must be less than 32 characters long')
     .custom((value, { req }) => {
       if (value !== req.body.password) {
@@ -42,5 +47,5 @@ exports.loginValidator = [
 
   check('password')
     .notEmpty().withMessage('Password is required')
-    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters long')
+    .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long')
 ];

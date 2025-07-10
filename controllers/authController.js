@@ -1,3 +1,4 @@
+const axios = require('axios');
 const { OAuth2Client } = require('google-auth-library');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const crypto = require("crypto");
@@ -91,7 +92,7 @@ exports.login = async (req, res, next) => {
 
     // 2 -> check if user exists
     const user = await User.findOne({ email }).select("+password");
-    
+
     if (!user || !user.active) {
         return res.status(401).json({
             status: "fail",
@@ -185,10 +186,10 @@ exports.getMe = (req, res) => {
         status: "success",
         data: {
             user: {
-                _id:req.user._id,
+                _id: req.user._id,
                 name: req.user.name,
                 email: req.user.email,
-                createdAt:req.user.createdAt,
+                createdAt: req.user.createdAt,
                 role: req.user.role
             }
         }
@@ -426,7 +427,8 @@ exports.googleSignIn = async (req, res) => {
             user = await User.create({
                 name,
                 email,
-                password: crypto.randomBytes(20).toString('hex') // dummy password
+                password: crypto.randomBytes(20).toString('hex'),
+                isVerified: true
             });
         }
 
@@ -454,3 +456,103 @@ exports.googleSignIn = async (req, res) => {
         });
     }
 };
+
+// @desc GitHub Sign-In
+// @route POST /api/v1/auth/github
+// @access Public
+exports.githubSignIn = async (req, res) => {
+    const { code } = req.body;
+
+    console.log('[GitHub SIGN-IN] Code from frontend:', code);
+    console.log('[GitHub SIGN-IN] ENV Vars:', {
+        GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
+        GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
+    });
+
+    if (!code) {
+        return res.status(400).json({ status: 'fail', message: 'Code is required' });
+    }
+
+    try {
+        const tokenRes = await axios.post(
+            'https://github.com/login/oauth/access_token',
+            {
+                client_id: process.env.GITHUB_CLIENT_ID,
+                client_secret: process.env.GITHUB_CLIENT_SECRET,
+                code,
+                redirect_uri: 'http://localhost:4200/login',
+            },
+            {
+                headers: {
+                    Accept: 'application/json',
+                },
+            }
+        );
+
+        console.log('[GitHub SIGN-IN] Full Token Response:', tokenRes);
+        console.log('[GitHub SIGN-IN] Token Response Data:', tokenRes.data);
+
+        const accessToken = tokenRes.data.access_token;
+
+        if (!accessToken) {
+            return res.status(401).json({
+                status: 'fail',
+                message: 'Access token not received from GitHub',
+                githubError: tokenRes.data,
+            });
+        }
+
+        const userRes = await axios.get('https://api.github.com/user', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        const emailRes = await axios.get('https://api.github.com/user/emails', {
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        const emailObj = emailRes.data.find(e => e.primary && e.verified);
+        const email = emailObj ? emailObj.email : null;
+
+        if (!email) {
+            return res.status(400).json({ status: 'fail', message: 'No verified email found in GitHub account' });
+        }
+
+        const { name, login } = userRes.data;
+
+        let user = await User.findOne({ email });
+        if (!user) {
+            user = await User.create({
+                name: name || login,
+                email,
+                password: crypto.randomBytes(20).toString('hex'),
+                isVerified: true,
+            });
+        }
+
+        const jwtToken = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+            expiresIn: process.env.JWT_EXPIRES_IN,
+        });
+
+        return res.status(200).json({
+            status: 'success',
+            token: jwtToken,
+            data: {
+                user: {
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role,
+                },
+            },
+        });
+    } catch (error) {
+        console.error('[GitHub SIGN-IN] Error:', error?.response?.data || error.message);
+        return res.status(401).json({
+            status: 'fail',
+            message: 'GitHub authentication failed',
+            error: error?.response?.data || error.message,
+        });
+    }
+};
+
+

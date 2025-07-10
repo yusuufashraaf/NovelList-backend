@@ -1,7 +1,10 @@
 const express = require("express");
-const { signup, login, forgotPassword, verifyPasswordResetCode, resetPassword, logout, googleSignIn, verifyEmail } = require("../controllers/authController");
+const { signup, login, forgotPassword, verifyPasswordResetCode, resetPassword, logout, googleSignIn, verifyEmail, githubSignIn } = require("../controllers/authController");
 const { signupValidator, loginValidator } = require("../middlewares/authValidator");
 const { protect } = require("../controllers/authController");
+const passport = require('passport');
+const jwt = require('jsonwebtoken');
+
 const router = express.Router();
 
 router
@@ -34,6 +37,20 @@ router
 router
   .route("/google")
   .post(googleSignIn);
+
+router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
+
+router.get(
+  '/github/callback',
+  passport.authenticate('github', { session: false, failureRedirect: '/' }),
+  async (req, res) => {
+    const token = jwt.sign({ id: req.user._id, role: req.user.role }, process.env.JWT_SECRET, {
+      expiresIn: process.env.JWT_EXPIRES_IN,
+    });
+
+    res.redirect(`http://localhost:4200/login?token=${token}`);
+  }
+);
 
 // router
 //   .route("/:id")

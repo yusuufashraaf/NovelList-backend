@@ -3,6 +3,8 @@ const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
 const qs = require("qs");
+const passport = require("passport");
+require("../config/passport");
 // const helmet = require("helmet");
 // const sanitizeMongoInput = require("express-mongo-sanitize");
 // const xss = require("xss-clean");
@@ -43,6 +45,7 @@ app.set("query parser", (str) => qs.parse(str));
 
 // Middleware
 app.use(express.json());
+app.use(passport.initialize());
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
