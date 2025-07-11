@@ -16,6 +16,7 @@ async function validateBought(req, res, next) {
       });
     }
     res.locals.isbought= true;
+    console.log("is bought",res.locals.isbought)
     next();
   } catch (err) {
     console.error("Error in validateBought:", err);

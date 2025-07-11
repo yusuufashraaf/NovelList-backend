@@ -6,8 +6,10 @@ async function validateReviewedBefore(req, res, next) {
 
   try {
     const comment = await Comment.find({
-      userId: new mongoose.Types.ObjectId(userId)
+      userId: new mongoose.Types.ObjectId(userId),
+      bookId:new mongoose.Types.ObjectId(bookId)
     });
+
 
     if (comment.length !== 0) {
       return res.status(401).json({
