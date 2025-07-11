@@ -2,10 +2,7 @@ const User = require("./../models/userAuthModel");
 
 const Authenticate = async (req, res, next) => {
   const token = req.headers.authorization;
-  console.log(req.headers);
-  
-  console.log(token);
-  
+
   // console.log("token:", token);
 
   // console.log("== Incoming request ==");
@@ -20,11 +17,9 @@ const Authenticate = async (req, res, next) => {
 
   let checkToken = token.split(" ")[1];
 
-  console.log("checkToken-test:", checkToken);
-
   const user = await User.verifyUser(checkToken);
+ 
   res.locals.userid =user._id;
-  
   if (!user) {
     return res
       .status(401)
@@ -32,7 +27,8 @@ const Authenticate = async (req, res, next) => {
   }
 
   req.user = user;
-
+ console.log("did you get here");
+    
   next();
 };
 

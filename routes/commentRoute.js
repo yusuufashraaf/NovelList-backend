@@ -11,11 +11,12 @@ const validateReviewedBefore = require("../middlewares/validateReviewedBefore")
 const Order = require("../models/order.model")
 router.post("/create",Authenticate ,validateBought,validateReviewedBefore,validateComment, async (req, res) => {
   try {
+
+    
     const comment = new Comment({
         ...req.body,
         userId: res.locals.userid,
     });
-    console.log(comment);
     
     const savedComment = await commentController.createComment(comment);
     console.log(savedComment);
@@ -94,6 +95,7 @@ router.get("/check/:bookId",Authenticate,async (req, res) => {
   const userId =res.locals.userid;
   
   try {
+    
     // Convert IDs
     const userObjId = new mongoose.Types.ObjectId(userId);
     const bookObjId = new mongoose.Types.ObjectId(bookId);
@@ -107,9 +109,9 @@ router.get("/check/:bookId",Authenticate,async (req, res) => {
     const isBought = order.length > 0;
 
     // Check if user has commented
-    const comment = await Comment.findOne({
-      user: userObjId,
-      book: bookObjId
+    const comment = await Comment.find({
+      userId: userObjId,
+      bookId: bookObjId
     });
 
     const isReviewed = !!comment;
