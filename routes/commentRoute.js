@@ -88,11 +88,10 @@ router.get("/user/:userId", async (req, res) => {
   }
 });
 // /comment/check?userId=${userId}&bookId=${bookId}
-router.get("/check/:bookId",async (req, res) => {
+router.get("/check/:bookId",Authenticate,async (req, res) => {
 
   const { bookId } = req.params;
   const userId =res.locals.userid;
-  console.log(req.params);
   
   try {
     // Convert IDs
