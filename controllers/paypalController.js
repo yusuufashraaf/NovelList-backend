@@ -59,7 +59,7 @@ const createOrder = async (req, res) => {
                 })
             }],
             application_context: {
-                return_url: 'http://localhost:4200/success',
+                return_url: 'http://localhost:4200/checkout/success-popup',
                 cancel_url: 'http://localhost:4200/err'
             }
         });
@@ -130,7 +130,7 @@ const createOrder = async (req, res) => {
 const captureOrder = async (req, res) => {
     try {
         const paypalOrderId = req.query.token;
-        console.log(paypalOrderId);
+
         
         const request = new paypal.orders.OrdersCaptureRequest(paypalOrderId);
         const capture = await client().execute(request);
@@ -152,6 +152,7 @@ const captureOrder = async (req, res) => {
                 message: 'Order not found'
             });
         }
+        console.log(order);
         
         res.json({
             success: true,
