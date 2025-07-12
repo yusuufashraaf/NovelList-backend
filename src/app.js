@@ -52,8 +52,11 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
 //
+// swagger docs
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 // Routes
 app.use("/api/v1/users", require("../routes/userRoute"));
 app.use("/api/v1/auth", require("../routes/authRoute"));
@@ -66,11 +69,19 @@ app.use("/api/v1/cart", cartRouter);
 app.use("/api/v1/wishlist", wishlistRouter);
 app.use("/api/v1/comments", commentRouter);
 
-//paypal
+// paypal
 app.use("/buy", paypalRoutes);
 
 // comment
 app.use("/api/v1/comment", commentRouter);
+
+//  Root route to fix 404 when visiting /
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: " NovelNest backend is up and running!",
+  });
+});
 
 // 404 handler
 app.use((req, res, next) => {
