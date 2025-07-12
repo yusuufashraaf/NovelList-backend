@@ -114,7 +114,7 @@ router.get("/check/:bookId",Authenticate,async (req, res) => {
       bookId: bookObjId
     });
 
-    const isReviewed = !!comment;
+    const isReviewed = comment.length>0;
 
     res.status(200).json({
       isBought,

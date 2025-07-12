@@ -50,7 +50,7 @@ exports.signup = async (req, res) => {
     });
 
     // ✅ Step 5: Send verification email
-    const verifyUrl = `http://localhost:4200/verify-email/${otp}`;
+    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email/${otp}`;
     await sendEmail({
       email,
       subject: "Verify your email",
