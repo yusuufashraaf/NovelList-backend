@@ -487,12 +487,6 @@ exports.googleSignIn = async (req, res) => {
 exports.githubSignIn = async (req, res) => {
     const { code } = req.body;
 
-    console.log('[GitHub SIGN-IN] Code from frontend:', code);
-    console.log('[GitHub SIGN-IN] ENV Vars:', {
-        GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
-        GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
-    });
-
     if (!code) {
         return res.status(400).json({ status: 'fail', message: 'Code is required' });
     }
@@ -512,9 +506,6 @@ exports.githubSignIn = async (req, res) => {
                 },
             }
         );
-
-        console.log('[GitHub SIGN-IN] Full Token Response:', tokenRes);
-        console.log('[GitHub SIGN-IN] Token Response Data:', tokenRes.data);
 
         const accessToken = tokenRes.data.access_token;
 
@@ -545,10 +536,12 @@ exports.githubSignIn = async (req, res) => {
 
         let user = await User.findOne({ email });
         if (!user) {
+            const rawPassword = crypto.randomBytes(12).toString('hex');
+            const hashedPassword = await bcrypt.hash(rawPassword, 12);
             user = await User.create({
                 name: name || login,
                 email,
-                password: crypto.randomBytes(20).toString('hex'),
+                password: hashedPassword,
                 isVerified: true,
             });
         }
