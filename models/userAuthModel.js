@@ -19,9 +19,12 @@ const userAuthSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: [true, "Password is required"],
+        required: function () {
+            return !this.oauthProvider;
+        },
+        // required: [true, "Password is required"],
         minlength: [6, "Password must be at least 6 characters"],
-        select: false // to prevent returning password in queries by default
+        select: false
     },
     role: {
         type: String,
@@ -77,25 +80,25 @@ userAuthSchema.methods.changedPasswordAfter = function (JWTTimestamp) {
 };
 
 
-userAuthSchema.statics.verifyUser = async function(token){
+userAuthSchema.statics.verifyUser = async function (token) {
     const User = this;
-    try{
-        const {id } = await jwtVerify(token,process.env.JWT_SECRET);
+    try {
+        const { id } = await jwtVerify(token, process.env.JWT_SECRET);
         return await User.findById(id);
-    }catch(err){
+    } catch (err) {
         const Errr = new Error("You are not Authorized");
-        Errr.status = 401; 
+        Errr.status = 401;
         throw Errr;
     }
 
 }
-userAuthSchema.statics.verifyAdmin = async function(token){
+userAuthSchema.statics.verifyAdmin = async function (token) {
     const User = this;
     try {
-        const {id } = await jwtVerify(token,process.env.JWT_SECRET);
+        const { id } = await jwtVerify(token, process.env.JWT_SECRET);
         const admin = await User.findById(id);
 
-       if (!admin || admin.role !== "admin") {
+        if (!admin || admin.role !== "admin") {
             const err = new Error("You are not authorized");
             err.status = 401;
             throw err;
@@ -104,7 +107,7 @@ userAuthSchema.statics.verifyAdmin = async function(token){
 
     } catch (error) {
         const Errr = new Error("You are not Authorized");
-        Errr.status = 401; 
+        Errr.status = 401;
         throw Errr;
     }
 }

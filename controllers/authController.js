@@ -13,64 +13,64 @@ const User = require("../models/userAuthModel");
 // @access public
 
 exports.signup = async (req, res) => {
-  try {
-    // ✅ Step 1: Validate request input
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      const errorMessages = errors.array().map((err) => err.msg);
-      return res.status(400).json({
-        status: "fail",
-        message: "Signup failed due to validation errors.",
-        errors: errorMessages, // all detailed validation messages
-      });
+    try {
+        // ✅ Step 1: Validate request input
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const errorMessages = errors.array().map((err) => err.msg);
+            return res.status(400).json({
+                status: "fail",
+                message: "Signup failed due to validation errors.",
+                errors: errorMessages, // all detailed validation messages
+            });
+        }
+
+        const { name, email, password } = req.body;
+
+        // ✅ Step 2: Check if user already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({
+                status: "fail",
+                message: "User with this email already exists",
+            });
+        }
+
+        // ✅ Step 3: Generate email verification token
+        const otp = crypto.randomBytes(20).toString("hex");
+        const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+
+        // ✅ Step 4: Create user in pending (unverified) state
+        const newUser = await User.create({
+            name,
+            email,
+            password,
+            verifyEmailToken: hashedOtp,
+            verifyEmailExpires: Date.now() + 10 * 60 * 1000, // 10 minutes
+        });
+
+        // ✅ Step 5: Send verification email
+        const verifyUrl = `${process.env.FRONTEND_URL}/verify-email/${otp}`;
+        await sendEmail({
+            email,
+            subject: "Verify your email",
+            message: `Hi ${name}, please verify your email by clicking this link:\n${verifyUrl}\n\nThis link will expire in 10 minutes.`,
+        });
+
+        // ✅ Step 6: Respond success
+        res.status(200).json({
+            status: "pending",
+            message: "Verification email sent. Please confirm to complete signup.",
+        });
+
+    } catch (error) {
+        console.error("Signup Error:", error.message);
+
+        res.status(500).json({
+            status: "error",
+            message: "Internal Server Error",
+        });
     }
-
-    const { name, email, password } = req.body;
-
-    // ✅ Step 2: Check if user already exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({
-        status: "fail",
-        message: "User with this email already exists",
-      });
-    }
-
-    // ✅ Step 3: Generate email verification token
-    const otp = crypto.randomBytes(20).toString("hex");
-    const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
-
-    // ✅ Step 4: Create user in pending (unverified) state
-    const newUser = await User.create({
-      name,
-      email,
-      password,
-      verifyEmailToken: hashedOtp,
-      verifyEmailExpires: Date.now() + 10 * 60 * 1000, // 10 minutes
-    });
-
-    // ✅ Step 5: Send verification email
-    const verifyUrl = `${process.env.FRONTEND_URL}/verify-email/${otp}`;
-    await sendEmail({
-      email,
-      subject: "Verify your email",
-      message: `Hi ${name}, please verify your email by clicking this link:\n${verifyUrl}\n\nThis link will expire in 10 minutes.`,
-    });
-
-    // ✅ Step 6: Respond success
-    res.status(200).json({
-      status: "pending",
-      message: "Verification email sent. Please confirm to complete signup.",
-    });
-
-  } catch (error) {
-    console.error("Signup Error:", error.message);
-
-    res.status(500).json({
-      status: "error",
-      message: "Internal Server Error",
-    });
-  }
 };
 
 exports.verifyEmail = async (req, res) => {
@@ -541,8 +541,9 @@ exports.githubSignIn = async (req, res) => {
             user = await User.create({
                 name: name || login,
                 email,
-                password: hashedPassword,
+                // password: hashedPassword,
                 isVerified: true,
+                oauthProvider: 'github',
             });
         }
 
