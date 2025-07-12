@@ -59,8 +59,8 @@ const createOrder = async (req, res) => {
                 })
             }],
             application_context: {
-                return_url: 'http://localhost:4200/checkout/success-popup',
-                cancel_url: 'http://localhost:4200/err'
+                return_url: `${process.env.FRONTEND_URL}/checkout/success-popup`,
+                cancel_url: `${process.env.FRONTEND_URL}/err`
             }
         });
 
