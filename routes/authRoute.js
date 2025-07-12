@@ -48,7 +48,7 @@ router.get(
       expiresIn: process.env.JWT_EXPIRES_IN,
     });
 
-    res.redirect(`http://localhost:4200/login?token=${token}`);
+    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
   }
 );
 

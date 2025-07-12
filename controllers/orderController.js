@@ -7,7 +7,7 @@ exports.getSuccessfulOrdersByUser = async (req, res) => {
     // Get delivered orders for this user
     const orders = await Order.find({
       userId,
-      status: "delivered",
+      status: "processing",
     }).populate({
       path: "books.book",
       select: "title author price imageCover pdfLink",
