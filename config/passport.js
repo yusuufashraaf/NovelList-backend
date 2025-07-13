@@ -2,6 +2,7 @@ const GitHubStrategy = require('passport-github2').Strategy;
 const User = require('../models/userAuthModel');
 const passport = require('passport');
 const axios = require('axios');
+const crypto = require("crypto");
 
 passport.use(
     new GitHubStrategy(
@@ -27,10 +28,13 @@ passport.use(
 
                 let user = await User.findOne({ email });
                 if (!user) {
+                    const rawPassword = crypto.randomBytes(12).toString("hex");
+                    const hashedPassword = await bcrypt.hash(rawPassword, 12);
+
                     user = await User.create({
                         name: profile.displayName || profile.username,
                         email,
-                        password: crypto.randomBytes(20).toString('hex'),
+                        password: hashedPassword,
                         isVerified: true,
                     });
                 }
