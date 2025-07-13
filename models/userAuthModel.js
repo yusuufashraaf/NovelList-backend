@@ -19,10 +19,10 @@ const userAuthSchema = new mongoose.Schema({
     },
     password: {
         type: String,
-        required: function () {
-            return !this.oauthProvider;
-        },
-        // required: [true, "Password is required"],
+        // required: function () {
+        //     return !this.oauthProvider;
+        // },
+        required: [true, "Password is required"],
         minlength: [6, "Password must be at least 6 characters"],
         select: false
     },
