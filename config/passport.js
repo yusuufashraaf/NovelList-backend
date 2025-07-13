@@ -30,7 +30,7 @@ passport.use(
                     user = await User.create({
                         name: profile.displayName || profile.username,
                         email,
-                        password: '',
+                        password: crypto.randomBytes(20).toString('hex'),
                         isVerified: true,
                     });
                 }
