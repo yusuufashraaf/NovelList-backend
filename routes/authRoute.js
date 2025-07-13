@@ -44,11 +44,24 @@ router.get(
   '/github/callback',
   passport.authenticate('github', { session: false, failureRedirect: '/' }),
   async (req, res) => {
-    const token = jwt.sign({ id: req.user._id, role: req.user.role }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
-    });
+    try {
+      if (!req.user) {
+        console.error("No user found in GitHub callback");
+        return res.status(401).json({ message: "Unauthorized" });
+      }
 
-    res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+      const token = jwt.sign(
+        { id: req.user._id, role: req.user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN }
+      );
+
+      console.log("GitHub login successful, redirecting with token...");
+      res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
+    } catch (err) {
+      console.error("GitHub callback error:", err);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
   }
 );
 

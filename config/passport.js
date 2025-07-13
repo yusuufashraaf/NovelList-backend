@@ -3,6 +3,7 @@ const User = require('../models/userAuthModel');
 const passport = require('passport');
 const axios = require('axios');
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 
 passport.use(
     new GitHubStrategy(
@@ -14,6 +15,8 @@ passport.use(
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
+                console.log("✅ GitHub profile:", profile);
+
                 let email = profile.emails?.[0]?.value;
 
                 if (!email) {
@@ -24,23 +27,32 @@ passport.use(
                     if (primary) email = primary.email;
                 }
 
-                if (!email) return done(new Error('No verified email found'), null);
+                if (!email) {
+                    console.error("🛑 No verified email found");
+                    return done(new Error('No verified email found'), null);
+                }
 
                 let user = await User.findOne({ email });
+
                 if (!user) {
                     const rawPassword = crypto.randomBytes(12).toString("hex");
                     const hashedPassword = await bcrypt.hash(rawPassword, 12);
 
                     user = await User.create({
-                        name: profile.displayName || profile.username,
+                        name: profile.displayName || profile.username || 'GitHub User',
                         email,
                         password: hashedPassword,
                         isVerified: true,
                     });
+
+                    console.log("New GitHub user created:", user.email);
+                } else {
+                    console.log("Existing GitHub user found:", user.email);
                 }
 
                 return done(null, user);
             } catch (err) {
+                console.error("Error in GitHub Strategy:", err);
                 return done(err);
             }
         }
