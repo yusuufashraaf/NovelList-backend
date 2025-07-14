@@ -25,6 +25,7 @@ const cartRouter = require("../routes/cart");
 const wishlistRouter = require("../routes/wishlist");
 const commentRouter = require("../routes/commentRoute");
 const userRouter = require("../routes/userRoute");
+const contact = require("../routes/contactRoute");
 
 // swagger
 const swaggerUi = require("swagger-ui-express");
@@ -68,6 +69,7 @@ app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/cart", cartRouter);
 app.use("/api/v1/wishlist", wishlistRouter);
 app.use("/api/v1/comments", commentRouter);
+app.use("/api/v1/contactUs", contact);
 
 // paypal
 app.use("/buy", paypalRoutes);
