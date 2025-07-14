@@ -1,6 +1,6 @@
 const Contact = require('../models/contactModel');
 const jwt = require('jsonwebtoken');
-const User = require('../models/userAuthModel'); // import user model
+const User = require('../models/userAuthModel');
 
 exports.submitMessage = async (req, res) => {
     try {
@@ -12,7 +12,6 @@ exports.submitMessage = async (req, res) => {
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Get user from DB
         const user = await User.findById(decoded.id);
         if (!user) {
             return res.status(404).json({ status: 'fail', message: 'User not found' });
