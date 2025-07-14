@@ -50,11 +50,14 @@ router.get(
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const token = jwt.sign(
-        { id: req.user._id, role: req.user.role },
-        process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
-      );
+      const token = jwt.sign({
+              id: req.user._id,
+              name: req.user.name,
+              email: req.user.email,
+              role: req.user.role,
+          }, process.env.JWT_SECRET, {
+              expiresIn: process.env.JWT_EXPIRES_IN
+          });
 
       console.log("GitHub login successful, redirecting with token...");
       res.redirect(`${process.env.FRONTEND_URL}/login?token=${token}`);
