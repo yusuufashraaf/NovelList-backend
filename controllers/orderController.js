@@ -14,8 +14,8 @@ exports.getSuccessfulOrdersByUser = async (req, res) => {
     });
 
     // Extract and flatten all books
-    const allBooks = orders.flatMap(
-      (order) => order.books.map((b) => b.book).filter((book) => book) 
+    const allBooks = orders.flatMap((order) =>
+      order.books.map((b) => b.book).filter((book) => book)
     );
 
     // Remove duplicates using Map by book ID
@@ -41,6 +41,65 @@ exports.getSuccessfulOrdersByUser = async (req, res) => {
     });
   }
 };
+
+exports.getAllOrdersByUser = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const orders = await Order.find({ userId, status: 'processing' }).populate({
+      path: "books.book",
+      select: "title author price imageCover pdfLink",
+    });
+
+    const bookQuantityMap = new Map();
+
+    for (const order of orders) {
+      for (const item of order.books) {
+        if (!item.book) continue;
+        const bookId = item.book._id.toString();
+        const qty = item.quantity || 1;
+
+        if (bookQuantityMap.has(bookId)) {
+          bookQuantityMap.set(bookId, {
+            ...bookQuantityMap.get(bookId),
+            quantity: bookQuantityMap.get(bookId).quantity + qty
+          });
+        } else {
+          bookQuantityMap.set(bookId, {
+            _id: item.book._id,
+            title: item.book.title,
+            author: item.book.author,
+            price: item.book.price,
+            imageCover: item.book.imageCover,
+            pdfLink: item.book.pdfLink,
+            quantity: qty
+          });
+        }
+      }
+    }
+
+    const booksSummary = Array.from(bookQuantityMap.values());
+
+    res.status(200).json({
+      status: "success",
+      ordersCount: orders.length,
+      booksCount: booksSummary.length,
+      data: {
+        orders,
+        booksSummary
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: "Failed to retrieve processing orders",
+      error: error.message,
+    });
+  }
+};
+
+
 
 exports.getAllOrders = async (req, res) => {
   try {
