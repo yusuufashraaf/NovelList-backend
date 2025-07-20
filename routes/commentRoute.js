@@ -106,8 +106,9 @@ router.get("/check/:bookId",Authenticate,async (req, res) => {
       "books.book": bookObjId
     });
 
-    const isBought = order.length > 0;
+    const isBought = order.length > 0 &&  order[0].status === 'processing';
 
+    
     // Check if user has commented
     const comment = await Comment.find({
       userId: userObjId,

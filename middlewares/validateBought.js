@@ -9,7 +9,7 @@ async function validateBought(req, res, next) {
       "books.book": new mongoose.Types.ObjectId(bookId)
     });
 
-    if (order.length === 0) {
+    if (order.length === 0 && (order.status !== 'completed' && order.status !== 'processing')) {
       return res.status(401).json({
         message: "You haven't bought this book",
         status: 401
