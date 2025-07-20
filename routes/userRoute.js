@@ -9,6 +9,7 @@ const {
   changePassword,
   loginUser,
   deactivateUser,
+  reactivateUser,
   changeRole
 } = require("../controllers/userController");
 
@@ -43,12 +44,14 @@ router
   .route("/:id")
   .get(protect, getUserById)
   .patch(protect, updateUser)
-  .delete(protect, allowedTo("admin"), deleteUser);
+  .delete(protect, allowedTo("admin"), deactivateUser);
 
 router
   .route("/deactivate/:id")
   .patch(protect, deactivateUser);
 
+router
+  .patch("/reactivate/:id", protect, allowedTo("admin"), reactivateUser);
 
 router.post("/changerole/:id",AuthenticateAdmin,changeRole);
 module.exports = router;
