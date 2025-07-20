@@ -48,7 +48,7 @@ router
 
 router
   .route("/deactivate/:id")
-  .patch(protect,allowedTo("admin"), deactivateUser);
+  .patch(protect, allowedTo("admin"), deactivateUser);
 
 router
   .patch("/reactivate/:id", protect, allowedTo("admin"), reactivateUser);
