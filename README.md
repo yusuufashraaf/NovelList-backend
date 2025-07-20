@@ -4,7 +4,7 @@ Welcome to the official documentation for **NovelNest** — a secure, scalable, 
 
 ---
 
-## 🧭 Table of Contents
+## 🧽 Table of Contents
 
 - [🚀 Features](#-features)
 - [🛠 Installation](#-installation)
@@ -113,27 +113,70 @@ BACKEND_URL=https://your-backend.com
 
 ### 👤 Users
 
-| Method | Endpoint        | Access        |
-| ------ | --------------- | ------------- |
-| GET    | `/api/users`    | Admin only    |
-| PATCH  | `/api/users/me` | Authenticated |
+| Method | Endpoint                     | Description                     |
+| ------ | ---------------------------- | ------------------------------- |
+| GET    | `/api/users/profile`         | Get current user profile        |
+| PUT    | `/api/users/profile`         | Update profile (name/email/etc) |
+| POST   | `/api/users/send-otp`        | Send OTP for password reset     |
+| POST   | `/api/users/verify-otp`      | Verify OTP                      |
+| POST   | `/api/users/forgot-password` | Start password reset            |
+| PUT    | `/api/users/reset-password`  | Reset password using OTP        |
 
 ### 📚 Products
 
-| Method | Endpoint            | Access     |
-| ------ | ------------------- | ---------- |
-| GET    | `/api/products`     | Public     |
-| POST   | `/api/products`     | Admin only |
-| PUT    | `/api/products/:id` | Admin only |
+| Method | Endpoint                | Description                       |
+| ------ | ----------------------- | --------------------------------- |
+| GET    | `/api/products`         | Get all products                  |
+| GET    | `/api/products/:id`     | Get a specific product            |
+| POST   | `/api/products`         | Add a product (admin/author only) |
+| PUT    | `/api/products/:id`     | Update a product                  |
+| DELETE | `/api/products/:id`     | Delete a product                  |
+| GET    | `/api/products/genres`  | Get unique genres                 |
+| GET    | `/api/products/authors` | Get unique authors                |
 
 ### 📂 Categories
 
-| Method | Endpoint          | Access     |
-| ------ | ----------------- | ---------- |
-| GET    | `/api/categories` | Public     |
-| POST   | `/api/categories` | Admin only |
+| Method | Endpoint          | Description              |
+| ------ | ----------------- | ------------------------ |
+| GET    | `/api/categories` | Get all categories       |
+| POST   | `/api/categories` | Add new category (admin) |
 
-➡️ _For Wishlist, Cart, Orders, Comments, and Reviews, refer to the [Full API Reference](docs/API_FULL.md)._
+### ❤️ Wishlist
+
+| Method | Endpoint                   | Description               |
+| ------ | -------------------------- | ------------------------- |
+| GET    | `/api/wishlist`            | Get user's wishlist       |
+| POST   | `/api/wishlist/:productId` | Add item to wishlist      |
+| DELETE | `/api/wishlist/:productId` | Remove item from wishlist |
+
+### 🛒 Cart
+
+| Method | Endpoint               | Description           |
+| ------ | ---------------------- | --------------------- |
+| GET    | `/api/cart`            | Get cart items        |
+| POST   | `/api/cart`            | Add item to cart      |
+| PUT    | `/api/cart`            | Update item quantity  |
+| DELETE | `/api/cart/:productId` | Remove item from cart |
+
+### 💳 Orders
+
+| Method | Endpoint               | Description                      |
+| ------ | ---------------------- | -------------------------------- |
+| POST   | `/api/orders`          | Place a new order                |
+| GET    | `/api/orders`          | Get user’s orders                |
+| GET    | `/api/orders/:orderId` | Get a specific order             |
+| GET    | `/api/orders/admin`    | Admin: get all orders            |
+| PUT    | `/api/orders/:orderId` | Update order status (admin only) |
+
+### 💬 Comments & Reviews
+
+| Method | Endpoint                           | Description                          |
+| ------ | ---------------------------------- | ------------------------------------ |
+| POST   | `/api/comments`                    | Add comment/review                   |
+| GET    | `/api/comments/product/:productId` | Get all comments for a product       |
+| GET    | `/api/comments/ratings/all`        | Get average ratings for all products |
+| GET    | `/api/comments/admin/all`          | Admin: get all comments              |
+| DELETE | `/api/comments/:commentId`         | Delete comment (admin or owner only) |
 
 ---
 
@@ -148,7 +191,7 @@ Authentication is powered by **JWT** and **OAuth**.
 
 ### 🔁 Auth Flow:
 
-1. Register/Login ➝ Get JWT token
+1. Register/Login ➔ Get JWT token
 2. Add token in requests to protected endpoints
 3. Middleware validates token and sets user info
 4. Access control enforced based on roles
@@ -193,9 +236,9 @@ Includes:
 ## 🧪 Testing
 
 - 🔧 **Manual**: Postman / Insomnia
-- 🧪 **Unit**: Jest / Mocha + Chai
+- 🤪 **Unit**: Jest / Mocha + Chai
 - 🔌 **Integration**: Supertest
-- 🧬 **E2E**: Simulated user flows
+- 🦮 **E2E**: Simulated user flows
 - 🔄 **Mocks**: For emails & external APIs
 
 ---
