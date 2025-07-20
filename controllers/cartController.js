@@ -100,6 +100,11 @@ const addToCart = expressAsyncHandler(async (req, res, next) => {
 
   product.quantity -= quantity;
   await product.save();
+  const io = req.app.get('io'); 
+    io.emit('bookQuantityUpdated', {
+    bookId: product._id.toString(),
+    quantity: product.quantity,
+});
 });
 
 // Get user's cart ─ cleans expired entries on the fly

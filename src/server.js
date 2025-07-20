@@ -11,6 +11,7 @@ const io = require('socket.io')(server, {
     credentials: true
   }
 });
+app.set('io', io);
 
 const adminSocketMap = new Map();
 
@@ -42,6 +43,7 @@ io.on("connection", async (socket) => {
     }
   });
 
+  
   socket.on("disconnect", () => {
     if (socket.userId && adminSocketMap.has(socket.userId)) {
       adminSocketMap.delete(socket.userId);

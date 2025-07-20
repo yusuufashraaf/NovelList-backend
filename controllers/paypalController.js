@@ -72,7 +72,7 @@ const createOrder = async (req, res) => {
             userId,
             books,
             totalPrice,
-            status: 'pending',
+            status: 'cancelled',
             shippingAddress,
             paymentMethod: paymentMethod || 'paypal',
             orderNumber,
@@ -139,12 +139,13 @@ const captureOrder = async (req, res) => {
         const order = await Order.findOneAndUpdate(
             { paypalOrderId: paypalOrderId },
             { 
-                status: capture.result.status === 'COMPLETED' ? 'processing' : 'pending',
+                status: capture.result.status === 'COMPLETED' ? 'processing' : 'Cancelled',
                 paypalCaptureId: capture.result.purchase_units[0].payments.captures[0].id,
                 paidAt: new Date()
             },
             { new: true }
         );
+
         
         if (!order) {
             return res.status(404).json({
