@@ -7,6 +7,7 @@ const Category = require("../models/category");
 const multer = require("multer");
 const sharp = require("sharp");
 const cloudinary = require("cloudinary").v2;
+const redisClient = require("../config/redisClient");
 
 // --- Image Upload Setup (Multer remains the same for memory storage) ---
 const multerStorage = multer.memoryStorage();
@@ -229,37 +230,50 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
 });
 
 const getAllProducts = expressAsyncHandler(async (req, res, next) => {
-  // 1. Build query
+  const redisKey = `products:${JSON.stringify(req.query)}`;
+
+  // 1. Try to get cached data from Redis
+  try {
+    const cachedData = await redisClient.get(redisKey);
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+
+      return res.status(200).json({
+        status: "success (from cache)",
+        ...parsed,
+      });
+    }
+  } catch (err) {
+              console.log("🔍 Checking Redis cache for key:");
+
+    console.error("Redis GET error:", err);
+    // Don't block request if Redis is down — proceed with DB
+  }
+
+  // 2. Build query
   const features = new ApiFeatures(Product.find(), req.query);
 
-  // Apply filters (including genre and rating)
+  // Apply filters
   await features.filter();
 
   // Apply search
   features.search("Product");
 
-  // Count documents *before* pagination to get total for pagination
-  // You need to clone the query to count without limit/skip
+  // Count total documents (before pagination)
   const totalDocuments = await features.mongooseQuery.clone().countDocuments();
 
-  // Apply pagination
+  // Apply pagination, sorting, field limiting
   features.paginate(totalDocuments);
-
-  // Apply sorting
   features.sort();
-
-  // Apply field limiting
   features.limitFields();
 
-  // 2. Execute query
+  // 3. Execute final query
   const products = await features.mongooseQuery.populate({
     path: "category",
     select: "name _id",
   });
 
-  // 3. Send response
-  res.status(200).json({
-    status: "success",
+  const responseData = {
     message:
       products.length === 0
         ? "No products match your filters"
@@ -268,6 +282,21 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
     totalPages: features.paginationResult.numberOfPages,
     results: products.length,
     data: products,
+  };
+
+  // 4. Save response in Redis with expiry (30 mins)
+  try {
+    await redisClient.setEx(redisKey, 1800, JSON.stringify(responseData));
+              console.log("🔍 Checking Redis cache for key:");
+
+  } catch (err) {
+    console.error("Redis SET error:", err);
+  }
+
+  // 5. Send response
+  res.status(200).json({
+    status: "success",
+    ...responseData,
   });
 });
 
