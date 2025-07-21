@@ -23,6 +23,7 @@ const brandRouter = require("../routes/brand");
 const productRouter = require("../routes/product");
 const cartRouter = require("../routes/cart");
 const wishlistRouter = require("../routes/wishlist");
+const aiRouter = require("../routes/aiRoute");
 const commentRouter = require("../routes/commentRoute");
 const userRouter = require("../routes/userRoute");
 const contact = require("../routes/contactRoute");
@@ -68,6 +69,7 @@ app.use("/api/v1/products", productRouter);
 app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/cart", cartRouter);
 app.use("/api/v1/wishlist", wishlistRouter);
+app.use("/api/v1/ai", aiRouter);
 app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/contactUs", contact);
 
