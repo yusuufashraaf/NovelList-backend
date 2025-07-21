@@ -1,16 +1,10 @@
-// backend/config/redisClient.js
+// config/redisClient.js
+require("dotenv").config();
+const { Redis } = require("@upstash/redis");
 
-const redis = require("redis");
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+});
 
-// Create Redis client
-const redisClient = redis.createClient();
-
-// Handle errors
-redisClient.on("error", (err) => console.error("Redis error:", err));
-
-// Connect immediately
-(async () => {
-  await redisClient.connect();
-})();
-
-module.exports = redisClient;
+module.exports = redis;
