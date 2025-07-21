@@ -203,7 +203,9 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
   };
 
   try {
-    await redisClient.set(redisKey, JSON.stringify(responseData), "EX", 1800);
+  await redisClient.set(redisKey, JSON.stringify(responseData), {
+    ex: 1800, // expiration in seconds
+  });
   } catch (err) {
     console.error("Redis SET error:", err);
   }
