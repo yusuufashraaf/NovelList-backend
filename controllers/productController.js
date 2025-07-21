@@ -165,7 +165,8 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
   try {
     const cachedData = await redisClient.get(redisKey);
     if (cachedData) {
-      const parsed = JSON.parse(cachedData);
+      const parsed =
+        typeof cachedData === "string" ? JSON.parse(cachedData) : cachedData;
       return res.status(200).json({
         status: "success (from cache)",
         ...parsed,
@@ -202,9 +203,7 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
   };
 
   try {
-    await redisClient.set(redisKey, JSON.stringify(responseData), {
-      EX: 1800,
-    });
+    await redisClient.set(redisKey, JSON.stringify(responseData), "EX", 1800);
   } catch (err) {
     console.error("Redis SET error:", err);
   }
