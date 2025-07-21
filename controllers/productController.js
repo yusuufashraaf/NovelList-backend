@@ -1,15 +1,25 @@
+// ==========================
+// Product Controller Module
+// ==========================
+
 const expressAsyncHandler = require("express-async-handler");
 const slugify = require("slugify");
+const multer = require("multer");
+const sharp = require("sharp");
+const streamifier = require("streamifier");
+const cloudinary = require("cloudinary").v2;
+
+// Utilities & Models
 const ApiFeatures = require("../utils/apiFeature");
 const AppError = require("../utils/AppError");
 const Product = require("../models/product");
 const Category = require("../models/category");
-const multer = require("multer");
-const sharp = require("sharp");
-const cloudinary = require("cloudinary").v2;
-const redisClient = require("../config/redisClient");
+const redis = require("../config/redisClient");
 
-// --- Image Upload Setup (Multer remains the same for memory storage) ---
+// ==========================
+// File Upload Setup (Multer)
+// ==========================
+
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
@@ -26,16 +36,19 @@ const multerFilter = (req, file, cb) => {
 const upload = multer({
   storage: multerStorage,
   fileFilter: multerFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
+
 const uploadProductFiles = upload.fields([
   { name: "imageCover", maxCount: 1 },
   { name: "images", maxCount: 5 },
   { name: "pdfLink", maxCount: 1 },
 ]);
-const streamifier = require("streamifier");
 
-// PDF uploader (clean version)
+// ==========================
+// Cloudinary Upload Helpers
+// ==========================
+
 const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
   const baseName = originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
   const finalFileName = `${baseName}.pdf`;
@@ -52,13 +65,12 @@ const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
       },
       (error, result) => {
         if (error) return reject(new AppError(500, "PDF Upload Failed"));
-        // Force download link
         const downloadUrl = result.secure_url.replace(
           "/raw/upload/",
-          "/raw/upload/fl_attachment/"
+          "/raw/upload/fl_attachment/",
         );
         resolve(downloadUrl);
-      }
+      },
     );
     streamifier.createReadStream(pdfBuffer).pipe(uploadStream);
   });
@@ -66,121 +78,75 @@ const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
 
 const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
   const files = req.files || {};
-  console.log("🟡 Starting Cloudinary uploads...");
-  console.log("📁 Files received:", Object.keys(files));
 
-  // 1. Upload imageCover
   if (files.imageCover?.[0]) {
     const img = files.imageCover[0];
-    console.log("📤 Uploading imageCover:", img.originalname);
-    console.log("📁 imageCover size:", img.size);
-    console.log("📁 imageCover mimetype:", img.mimetype);
-    console.log("📁 imageCover buffer length:", img.buffer?.length);
-
     try {
       const result = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
           {
             folder: "products",
-            public_id: `${Date.now()}-${img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_")}`,
+            public_id: `${Date.now()}-${img.originalname
+              .replace(/\.[^/.]+$/, "")
+              .replace(/\s+/g, "_")}`,
           },
           (error, result) => {
-            if (error) {
-              console.error(
-                "🚨 Cloudinary imageCover upload error (FULL):",
-                error
-              );
-              return reject(
-                new AppError(
-                  500,
-                  `Image Cover Upload Failed: ${error.message || error}`
-                )
-              );
-            }
+            if (error) return reject(new AppError(500, `Image Cover Upload Failed: ${error.message}`));
             resolve(result);
-          }
+          },
         );
         streamifier.createReadStream(img.buffer).pipe(stream);
       });
-
       req.body.imageCover = result.secure_url;
     } catch (err) {
       return next(err);
     }
   }
 
-  // 2. Upload PDF
   if (files.pdfLink?.[0]) {
     const pdf = files.pdfLink[0];
-    console.log("📤 Uploading PDF:", pdf.originalname);
-    console.log("📁 pdfLink size:", pdf.size);
-    console.log("📁 pdfLink mimetype:", pdf.mimetype);
-    console.log("📁 pdfLink buffer length:", pdf.buffer?.length);
-
     try {
-      req.body.pdfLink = await uploadPDFToCloudinary(
-        pdf.buffer,
-        pdf.originalname
-      );
+      req.body.pdfLink = await uploadPDFToCloudinary(pdf.buffer, pdf.originalname);
     } catch (err) {
-      console.error("🚨 Cloudinary PDF upload error:", err);
       return next(new AppError(500, "PDF Upload Failed"));
     }
   }
 
-  // 3. Upload additional images
   if (Array.isArray(files.images)) {
     req.body.images = [];
-    console.log(`📤 Uploading ${files.images.length} additional image(s)...`);
-
     try {
       await Promise.all(
-        files.images.map((img, index) => {
-          console.log(`📤 Uploading image ${index + 1}:`, img.originalname);
-          console.log("📁 image size:", img.size);
-          console.log("📁 image mimetype:", img.mimetype);
-          console.log("📁 image buffer length:", img.buffer?.length);
-
+        files.images.map((img) => {
           return new Promise((resolve, reject) => {
             const cleanedName = img.originalname
               .replace(/\.[^/.]+$/, "")
               .replace(/\s+/g, "_");
-
             const stream = cloudinary.uploader.upload_stream(
               {
                 folder: "products",
                 public_id: `${Date.now()}-${cleanedName}`,
               },
               (error, result) => {
-                if (error) {
-                  console.error(
-                    "🚨 Cloudinary image upload error (FULL):",
-                    error
-                  );
-                  return reject(
-                    new AppError(
-                      500,
-                      `Image Upload Failed: ${error.message || error}`
-                    )
-                  );
-                }
+                if (error) return reject(new AppError(500, `Image Upload Failed: ${error.message}`));
                 req.body.images.push(result.secure_url);
                 resolve();
-              }
+              },
             );
-
             streamifier.createReadStream(img.buffer).pipe(stream);
           });
-        })
+        }),
       );
     } catch (err) {
       return next(err);
     }
   }
 
-  console.log("✅ All uploads completed successfully.");
   next();
 });
+
+// ==========================
+// Controllers
+// ==========================
 
 const addproduct = expressAsyncHandler(async (req, res, next) => {
   const { body } = req;
@@ -193,18 +159,9 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
     !body.imageCover ||
     !body.author
   ) {
-    console.error("❌ Missing required fields:", {
-      title: body.title,
-      price: body.price,
-      quantity: body.quantity,
-      category: body.category,
-      imageCover: body.imageCover,
-      author: body.author,
-    });
     return next(new AppError(400, "All required fields must be provided"));
   }
 
-  // Parse subcategory if needed
   if (body.subcategory && typeof body.subcategory === "string") {
     body.subcategory = JSON.parse(body.subcategory);
   }
@@ -212,15 +169,12 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
   body.slug = slugify(body.title);
 
   const product = await Product.create(body);
-
   await product.populate([
     { path: "category", select: "name _id" },
     { path: "subcategory", select: "name _id" },
   ]);
 
-  if (!product) {
-    return next(new AppError(400, "Product Not Added"));
-  }
+  if (!product) return next(new AppError(400, "Product Not Added"));
 
   res.status(201).json({
     status: "success",
@@ -230,86 +184,85 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
 });
 
 const getAllProducts = expressAsyncHandler(async (req, res, next) => {
-  const redisKey = `products:${JSON.stringify(req.query)}`;
+  const normalizeQuery = (query) => {
+    const sorted = Object.keys(query)
+      .sort()
+      .map((k) => {
+        if (typeof query[k] === "object" && query[k] !== null) {
+          const inner = Object.keys(query[k])
+            .sort()
+            .map((ik) => `${ik}:${query[k][ik]}`)
+            .join(",");
+          return `${k}:{${inner}}`;
+        }
+        return `${k}:${query[k]}`;
+      })
+      .join("|");
+    return `products:${sorted}`;
+  };
 
-  // 1. Try to get cached data from Redis
+  const key = normalizeQuery(req.query);
+
   try {
-    const cachedData = await redisClient.get(redisKey);
-    if (cachedData) {
-      const parsed = JSON.parse(cachedData);
-
-      return res.status(200).json({
-        status: "success (from cache)",
-        ...parsed,
-      });
+    const cached = await redis.get(key);
+    if (cached && typeof cached === "string") {
+      try {
+        const parsed = JSON.parse(cached);
+        return res.json({ ...parsed, fromCache: true });
+      } catch {}
     }
-  } catch (err) {
-              console.log("🔍 Checking Redis cache for key:");
+  } catch {}
 
-    console.error("Redis GET error:", err);
-    // Don't block request if Redis is down — proceed with DB
-  }
-
-  // 2. Build query
   const features = new ApiFeatures(Product.find(), req.query);
-
-  // Apply filters
   await features.filter();
-
-  // Apply search
   features.search("Product");
 
-  // Count total documents (before pagination)
-  const totalDocuments = await features.mongooseQuery.clone().countDocuments();
+  let totalDocs;
+  try {
+    totalDocs = await features.mongooseQuery.clone().countDocuments();
+  } catch {
+    return next(new AppError(500, "Error counting products"));
+  }
 
-  // Apply pagination, sorting, field limiting
-  features.paginate(totalDocuments);
+  features.paginate(totalDocs);
   features.sort();
   features.limitFields();
 
-  // 3. Execute final query
-  const products = await features.mongooseQuery.populate({
-    path: "category",
-    select: "name _id",
-  });
+  let products;
+  try {
+    products = await features.mongooseQuery.populate({
+      path: "category",
+      select: "name _id",
+    });
+  } catch {
+    return next(new AppError(500, "DB population error"));
+  }
 
-  const responseData = {
-    message:
-      products.length === 0
-        ? "No products match your filters"
-        : "Products fetched successfully",
+  const response = {
+    status: "success",
+    message: products.length ? "Products fetched" : "No products match",
     currentPage: features.paginationResult.currentPage,
     totalPages: features.paginationResult.numberOfPages,
     results: products.length,
     data: products,
   };
 
-  // 4. Save response in Redis with expiry (30 mins)
   try {
-    await redisClient.setEx(redisKey, 1800, JSON.stringify(responseData));
-              console.log("🔍 Checking Redis cache for key:");
+    await redis.set(key, JSON.stringify(response), { ex: 1800 });
+  } catch {}
 
-  } catch (err) {
-    console.error("Redis SET error:", err);
-  }
-
-  // 5. Send response
-  res.status(200).json({
-    status: "success",
-    ...responseData,
-  });
+  res.json(response);
 });
 
 const getproduct = expressAsyncHandler(async (req, res, next) => {
   const { id } = req.params;
 
-  const product = await Product.findOne({ _id: id }).populate({
+  const product = await Product.findById(id).populate({
     path: "category",
-    select: "name  _id",
+    select: "name _id",
   });
-  if (!product) {
-    return next(new AppError(404, "Product Not Found "));
-  }
+
+  if (!product) return next(new AppError(404, "Product Not Found"));
 
   res.status(200).json({
     status: "Success",
@@ -322,14 +275,12 @@ const UpdateProduct = expressAsyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const body = req.body;
 
-  if (body.title) {
-    body.slug = slugify(body.title);
-  }
+  if (body.title) body.slug = slugify(body.title);
 
   if (body.subcategory && typeof body.subcategory === "string") {
     try {
       body.subcategory = JSON.parse(body.subcategory);
-    } catch (err) {
+    } catch {
       return next(new AppError(400, "Invalid subcategory format"));
     }
   }
@@ -337,8 +288,8 @@ const UpdateProduct = expressAsyncHandler(async (req, res, next) => {
   const product = await Product.findByIdAndUpdate(id, body, {
     new: true,
   }).populate([
-    { path: "category", select: "name  _id" },
-    { path: "subcategory", select: "name  _id" },
+    { path: "category", select: "name _id" },
+    { path: "subcategory", select: "name _id" },
   ]);
 
   if (!product) return next(new AppError(404, "Product Not Found"));
@@ -352,38 +303,31 @@ const UpdateProduct = expressAsyncHandler(async (req, res, next) => {
 
 const deleteProduct = expressAsyncHandler(async (req, res, next) => {
   const { id } = req.params;
-  const product = await Product.findOneAndDelete({ _id: id });
 
-  if (!product) {
-    return next(new AppError(404, "product Not Found"));
-  }
+  const product = await Product.findByIdAndDelete(id);
+
+  if (!product) return next(new AppError(404, "Product Not Found"));
 
   res.status(200).json({
     status: "Success",
-    message: "product  Deleted Successfully",
+    message: "Product Deleted Successfully",
   });
 });
 
 const getUniqueGenres = expressAsyncHandler(async (req, res, next) => {
-  // Get unique category IDs from products
   const categoryIds = await Product.distinct("category");
-
-  const categories = await Category.find({ _id: { $in: categoryIds } }).select(
-    "name"
-  );
-
-  res.status(200).json({
-    genres: categories,
-  });
+  const categories = await Category.find({ _id: { $in: categoryIds } }).select("name");
+  res.status(200).json({ genres: categories });
 });
 
 const getUniqueAuthors = expressAsyncHandler(async (req, res, next) => {
   const authors = await Product.distinct("author");
-
-  res.status(200).json({
-    authors,
-  });
+  res.status(200).json({ authors });
 });
+
+// ==========================
+// Exports
+// ==========================
 
 module.exports = {
   addproduct,
