@@ -1,25 +1,16 @@
-// ==========================
-// Product Controller Module
-// ==========================
-
 const expressAsyncHandler = require("express-async-handler");
 const slugify = require("slugify");
-const multer = require("multer");
-const sharp = require("sharp");
-const streamifier = require("streamifier");
-const cloudinary = require("cloudinary").v2;
-
-// Utilities & Models
 const ApiFeatures = require("../utils/apiFeature");
 const AppError = require("../utils/AppError");
 const Product = require("../models/product");
 const Category = require("../models/category");
-const redis = require("../config/redisClient");
+const multer = require("multer");
+const sharp = require("sharp");
+const cloudinary = require("cloudinary").v2;
+const redisClient = require("../config/redisClient");
+const streamifier = require("streamifier");
 
-// ==========================
-// File Upload Setup (Multer)
-// ==========================
-
+// --- Multer Setup for Memory Upload ---
 const multerStorage = multer.memoryStorage();
 
 const multerFilter = (req, file, cb) => {
@@ -29,7 +20,7 @@ const multerFilter = (req, file, cb) => {
   ) {
     cb(null, true);
   } else {
-    cb(new AppError(400, "Please upload only images or PDF files."));
+    cb(new AppError(400, "Only images or PDFs are allowed"));
   }
 };
 
@@ -45,10 +36,6 @@ const uploadProductFiles = upload.fields([
   { name: "pdfLink", maxCount: 1 },
 ]);
 
-// ==========================
-// Cloudinary Upload Helpers
-// ==========================
-
 const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
   const baseName = originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
   const finalFileName = `${baseName}.pdf`;
@@ -61,16 +48,15 @@ const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
         public_id: `${Date.now()}-${finalFileName}`,
         use_filename: true,
         unique_filename: false,
-        type: "upload",
       },
       (error, result) => {
         if (error) return reject(new AppError(500, "PDF Upload Failed"));
         const downloadUrl = result.secure_url.replace(
           "/raw/upload/",
-          "/raw/upload/fl_attachment/",
+          "/raw/upload/fl_attachment/"
         );
         resolve(downloadUrl);
-      },
+      }
     );
     streamifier.createReadStream(pdfBuffer).pipe(uploadStream);
   });
@@ -79,74 +65,66 @@ const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
 const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
   const files = req.files || {};
 
+  // Upload imageCover
   if (files.imageCover?.[0]) {
     const img = files.imageCover[0];
-    try {
-      const result = await new Promise((resolve, reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-          {
-            folder: "products",
-            public_id: `${Date.now()}-${img.originalname
-              .replace(/\.[^/.]+$/, "")
-              .replace(/\s+/g, "_")}`,
-          },
-          (error, result) => {
-            if (error) return reject(new AppError(500, `Image Cover Upload Failed: ${error.message}`));
-            resolve(result);
-          },
-        );
-        streamifier.createReadStream(img.buffer).pipe(stream);
-      });
-      req.body.imageCover = result.secure_url;
-    } catch (err) {
-      return next(err);
-    }
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          folder: "products",
+          public_id: `${Date.now()}-${img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_")}`,
+        },
+        (error, result) => {
+          if (error)
+            return reject(new AppError(500, "Image Cover Upload Failed"));
+          resolve(result);
+        }
+      );
+      streamifier.createReadStream(img.buffer).pipe(stream);
+    });
+    req.body.imageCover = result.secure_url;
   }
 
+  // Upload PDF
   if (files.pdfLink?.[0]) {
     const pdf = files.pdfLink[0];
-    try {
-      req.body.pdfLink = await uploadPDFToCloudinary(pdf.buffer, pdf.originalname);
-    } catch (err) {
-      return next(new AppError(500, "PDF Upload Failed"));
-    }
+    req.body.pdfLink = await uploadPDFToCloudinary(
+      pdf.buffer,
+      pdf.originalname
+    );
   }
 
+  // Upload additional images
   if (Array.isArray(files.images)) {
     req.body.images = [];
-    try {
-      await Promise.all(
-        files.images.map((img) => {
-          return new Promise((resolve, reject) => {
-            const cleanedName = img.originalname
-              .replace(/\.[^/.]+$/, "")
-              .replace(/\s+/g, "_");
-            const stream = cloudinary.uploader.upload_stream(
-              {
-                folder: "products",
-                public_id: `${Date.now()}-${cleanedName}`,
-              },
-              (error, result) => {
-                if (error) return reject(new AppError(500, `Image Upload Failed: ${error.message}`));
-                req.body.images.push(result.secure_url);
-                resolve();
-              },
-            );
-            streamifier.createReadStream(img.buffer).pipe(stream);
-          });
-        }),
-      );
-    } catch (err) {
-      return next(err);
-    }
+    await Promise.all(
+      files.images.map((img) => {
+        return new Promise((resolve, reject) => {
+          const cleanedName = img.originalname
+            .replace(/\.[^/.]+$/, "")
+            .replace(/\s+/g, "_");
+          const stream = cloudinary.uploader.upload_stream(
+            {
+              folder: "products",
+              public_id: `${Date.now()}-${cleanedName}`,
+            },
+            (error, result) => {
+              if (error)
+                return reject(new AppError(500, "Image Upload Failed"));
+              req.body.images.push(result.secure_url);
+              resolve();
+            }
+          );
+          streamifier.createReadStream(img.buffer).pipe(stream);
+        });
+      })
+    );
   }
 
   next();
 });
 
-// ==========================
-// Controllers
-// ==========================
+// ==================== Product Controllers ====================
 
 const addproduct = expressAsyncHandler(async (req, res, next) => {
   const { body } = req;
@@ -167,14 +145,12 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
   }
 
   body.slug = slugify(body.title);
-
   const product = await Product.create(body);
+
   await product.populate([
     { path: "category", select: "name _id" },
     { path: "subcategory", select: "name _id" },
   ]);
-
-  if (!product) return next(new AppError(400, "Product Not Added"));
 
   res.status(201).json({
     status: "success",
@@ -184,63 +160,41 @@ const addproduct = expressAsyncHandler(async (req, res, next) => {
 });
 
 const getAllProducts = expressAsyncHandler(async (req, res, next) => {
-  const normalizeQuery = (query) => {
-    const sorted = Object.keys(query)
-      .sort()
-      .map((k) => {
-        if (typeof query[k] === "object" && query[k] !== null) {
-          const inner = Object.keys(query[k])
-            .sort()
-            .map((ik) => `${ik}:${query[k][ik]}`)
-            .join(",");
-          return `${k}:{${inner}}`;
-        }
-        return `${k}:${query[k]}`;
-      })
-      .join("|");
-    return `products:${sorted}`;
-  };
-
-  const key = normalizeQuery(req.query);
+  const redisKey = `products:${JSON.stringify(req.query)}`;
 
   try {
-    const cached = await redis.get(key);
-    if (cached && typeof cached === "string") {
-      try {
-        const parsed = JSON.parse(cached);
-        return res.json({ ...parsed, fromCache: true });
-      } catch {}
+    const cachedData = await redisClient.get(redisKey);
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      return res.status(200).json({
+        status: "success (from cache)",
+        ...parsed,
+      });
     }
-  } catch {}
+  } catch (err) {
+    console.error("Redis GET error:", err);
+  }
 
   const features = new ApiFeatures(Product.find(), req.query);
   await features.filter();
   features.search("Product");
 
-  let totalDocs;
-  try {
-    totalDocs = await features.mongooseQuery.clone().countDocuments();
-  } catch {
-    return next(new AppError(500, "Error counting products"));
-  }
+  const totalDocuments = await features.mongooseQuery.clone().countDocuments();
 
-  features.paginate(totalDocs);
+  features.paginate(totalDocuments);
   features.sort();
   features.limitFields();
 
-  let products;
-  try {
-    products = await features.mongooseQuery.populate({
-      path: "category",
-      select: "name _id",
-    });
-  } catch {
-    return next(new AppError(500, "DB population error"));
-  }
+  const products = await features.mongooseQuery.populate({
+    path: "category",
+    select: "name _id",
+  });
 
-  const response = {
-    status: "success",
-    message: products.length ? "Products fetched" : "No products match",
+  const responseData = {
+    message:
+      products.length === 0
+        ? "No products match your filters"
+        : "Products fetched successfully",
     currentPage: features.paginationResult.currentPage,
     totalPages: features.paginationResult.numberOfPages,
     results: products.length,
@@ -248,24 +202,32 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
   };
 
   try {
-    await redis.set(key, JSON.stringify(response), { ex: 1800 });
-  } catch {}
+    await redisClient.set(redisKey, JSON.stringify(responseData), {
+      EX: 1800,
+    });
+  } catch (err) {
+    console.error("Redis SET error:", err);
+  }
 
-  res.json(response);
+  res.status(200).json({
+    status: "success",
+    ...responseData,
+  });
 });
 
 const getproduct = expressAsyncHandler(async (req, res, next) => {
   const { id } = req.params;
-
-  const product = await Product.findById(id).populate({
+  const product = await Product.findOne({ _id: id }).populate({
     path: "category",
     select: "name _id",
   });
 
-  if (!product) return next(new AppError(404, "Product Not Found"));
+  if (!product) {
+    return next(new AppError(404, "Product Not Found"));
+  }
 
   res.status(200).json({
-    status: "Success",
+    status: "success",
     message: "Get Single Product Successfully",
     data: product,
   });
@@ -275,7 +237,9 @@ const UpdateProduct = expressAsyncHandler(async (req, res, next) => {
   const { id } = req.params;
   const body = req.body;
 
-  if (body.title) body.slug = slugify(body.title);
+  if (body.title) {
+    body.slug = slugify(body.title);
+  }
 
   if (body.subcategory && typeof body.subcategory === "string") {
     try {
@@ -303,31 +267,29 @@ const UpdateProduct = expressAsyncHandler(async (req, res, next) => {
 
 const deleteProduct = expressAsyncHandler(async (req, res, next) => {
   const { id } = req.params;
-
-  const product = await Product.findByIdAndDelete(id);
+  const product = await Product.findOneAndDelete({ _id: id });
 
   if (!product) return next(new AppError(404, "Product Not Found"));
 
   res.status(200).json({
-    status: "Success",
+    status: "success",
     message: "Product Deleted Successfully",
   });
 });
 
-const getUniqueGenres = expressAsyncHandler(async (req, res, next) => {
+const getUniqueGenres = expressAsyncHandler(async (req, res) => {
   const categoryIds = await Product.distinct("category");
-  const categories = await Category.find({ _id: { $in: categoryIds } }).select("name");
+  const categories = await Category.find({ _id: { $in: categoryIds } }).select(
+    "name"
+  );
+
   res.status(200).json({ genres: categories });
 });
 
-const getUniqueAuthors = expressAsyncHandler(async (req, res, next) => {
+const getUniqueAuthors = expressAsyncHandler(async (req, res) => {
   const authors = await Product.distinct("author");
   res.status(200).json({ authors });
 });
-
-// ==========================
-// Exports
-// ==========================
 
 module.exports = {
   addproduct,
