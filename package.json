@@ -25,6 +25,7 @@
     "prettier": "^3.6.2"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/paypal-server-sdk": "^1.1.0",
     "axios": "^1.10.0",
@@ -35,6 +36,7 @@
     "dotenv": "^17.0.1",
     "express": "^5.1.0",
     "express-async-handler": "^1.2.0",
+    "express-rate-limit": "^8.0.1",
     "express-validator": "^7.2.1",
     "google-auth-library": "^10.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -45,6 +47,7 @@
     "nodemailer": "^7.0.4",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
+    "pdf-parse": "^1.1.1",
     "qs": "^6.14.0",
     "sharp": "^0.34.2",
     "slugify": "^1.6.6",
