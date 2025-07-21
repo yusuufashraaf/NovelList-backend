@@ -46,7 +46,9 @@ io.on("connection", async (socket) => {
   socket.on("disconnect", () => {
     if (socket.userId && adminSocketMap.has(socket.userId)) {
       adminSocketMap.delete(socket.userId);
-      console.log(`Admin with ID ${socket.userId} disconnected and removed from map.`);
+      console.log(
+        `Admin with ID ${socket.userId} disconnected and removed from map.`
+      );
     }
   });
 });
