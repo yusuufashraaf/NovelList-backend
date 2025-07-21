@@ -117,10 +117,17 @@ exports.login = async (req, res, next) => {
     // 2 -> check if user exists
     const user = await User.findOne({ email }).select("+password");
 
-    if (!user || !user.active) {
+    if (!user) {
         return res.status(401).json({
             status: "fail",
             message: "Invalid email or password"
+        });
+    }
+    // Check if user is active
+    if (!user.active) {
+        return res.status(403).json({
+            status: "fail",
+            message: "Your account is deactivated. Please contact the admins"
         });
     }
 
@@ -187,6 +194,13 @@ exports.protect = async (req, res, next) => {
             return res.status(401).json({
                 status: "fail",
                 message: "User belonging to this token does not exist."
+            });
+        }
+
+        if (!currentUser.active) {
+            return res.status(403).json({
+                status: "fail",
+                message: "Your account has been deactivated. Please contact the admins."
             });
         }
 

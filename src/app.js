@@ -34,12 +34,29 @@ const swaggerDocument = require("../swagger.json");
 
 const app = express();
 
-app.use(cors());
 // app.use(limiter);
 // app.use(helmet());
 // app.use(sanitizeMongoInput);
 // app.use(xss());
 // app.use(hpp());
+
+const allowedOrigins = [
+  "http://localhost:4200",
+  "https://novel-nest-two.vercel.app", // ✅ your actual frontend
+];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS: " + origin));
+    }
+  },
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 app.use(morgan("dev"));
 

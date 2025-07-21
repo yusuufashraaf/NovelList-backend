@@ -38,7 +38,19 @@ exports.submitMessage = async (req, res) => {
             data: newMessage,
         });
     } catch (error) {
-        console.error('[Contact Submission Error]:', error);
+        res.status(500).json({ status: 'error', message: 'Server Error' });
+    }
+};
+
+exports.getAllMessages = async (req, res) => {
+    try {
+        const messages = await Contact.find().sort({ createdAt: -1 });
+        res.status(200).json({
+            status: 'success',
+            results: messages.length,
+            data: messages
+        });
+    } catch (error) {
         res.status(500).json({ status: 'error', message: 'Server Error' });
     }
 };

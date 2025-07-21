@@ -134,15 +134,41 @@ exports.registerUser = async (req, res) => {
 
 exports.deactivateUser = async (req, res) => {
     try {
-        const user = await User.findByIdAndUpdate(req.params.id, {active: false});
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { active: false },
+            { new: true }
+        );
+
         if (!user) {
-            return res.status(404).json({ error: "User not found" });
+            return res.status(404).json({ status: 'fail', message: 'User not found' });
         }
-        res.status(200).json({ message: "User deleted successfully" });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
+
+        res.status(200).json({ status: 'success', message: 'User deactivated successfully' });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: 'Something went wrong' });
     }
 };
+
+exports.reactivateUser = async (req, res) => {
+    try {
+        const user = await User.findByIdAndUpdate(
+            req.params.id,
+            { active: true },
+            { new: true }
+        );
+
+        if (!user) {
+            return res.status(404).json({ status: 'fail', message: 'User not found' });
+        }
+
+        res.status(200).json({ status: 'success', message: 'User reactivated successfully' });
+    } catch (err) {
+        res.status(500).json({ status: 'error', message: 'Something went wrong' });
+    }
+};
+
+
 exports.changeRole = async (req, res) => {
   try {
     const idOfUser = req.params.id;

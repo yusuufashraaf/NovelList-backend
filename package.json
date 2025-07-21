@@ -28,6 +28,7 @@
     "@google/generative-ai": "^0.24.1",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/paypal-server-sdk": "^1.1.0",
+    "@upstash/redis": "^1.35.1",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.2",
@@ -44,6 +45,7 @@
     "mongoose": "^8.16.1",
     "morgan": "^1.10.0",
     "multer": "^2.0.1",
+    "ngx-extended-pdf-viewer": "^24.2.4",
     "nodemailer": "^7.0.4",
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
@@ -54,6 +56,7 @@
     "socket.io": "^4.8.1",
     "streamifier": "^0.1.1",
     "swagger-ui-express": "^5.0.1",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "winston": "^3.17.0"
   }
 }

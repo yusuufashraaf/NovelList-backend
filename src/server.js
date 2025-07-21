@@ -7,10 +7,12 @@ require("dotenv").config();
 
 const io = require("socket.io")(server, {
   cors: {
-    origin: "http://localhost:4200",
+    origin: ["http://localhost:4200", "https://novel-nest-two.vercel.app"],
     credentials: true,
   },
 });
+
+app.set("io", io);
 
 const adminSocketMap = new Map();
 
