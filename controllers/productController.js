@@ -66,16 +66,12 @@ const uploadPDFToCloudinary = async (pdfBuffer, originalname) => {
 
 const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
     const files = req.files || {};
-    console.log("🟡 Starting Cloudinary uploads...");
-    console.log("📁 Files received:", Object.keys(files));
+    
 
     // 1. Upload imageCover
     if (files.imageCover?.[0]) {
         const img = files.imageCover[0];
-        console.log("📤 Uploading imageCover:", img.originalname);
-        console.log("📁 imageCover size:", img.size);
-        console.log("📁 imageCover mimetype:", img.mimetype);
-        console.log("📁 imageCover buffer length:", img.buffer?.length);
+      
 
         try {
             const result = await new Promise((resolve, reject) => {
@@ -86,7 +82,6 @@ const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
                     },
                     (error, result) => {
                         if (error) {
-                            console.error("🚨 Cloudinary imageCover upload error (FULL):", error);
                             return reject(new AppError(500, `Image Cover Upload Failed: ${error.message || error}`));
                         }
                         resolve(result);
@@ -104,15 +99,11 @@ const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
     // 2. Upload PDF
     if (files.pdfLink?.[0]) {
         const pdf = files.pdfLink[0];
-        console.log("📤 Uploading PDF:", pdf.originalname);
-        console.log("📁 pdfLink size:", pdf.size);
-        console.log("📁 pdfLink mimetype:", pdf.mimetype);
-        console.log("📁 pdfLink buffer length:", pdf.buffer?.length);
+       
 
         try {
             req.body.pdfLink = await uploadPDFToCloudinary(pdf.buffer, pdf.originalname);
         } catch (err) {
-            console.error("🚨 Cloudinary PDF upload error:", err);
             return next(new AppError(500, "PDF Upload Failed"));
         }
     }
@@ -120,15 +111,11 @@ const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
     // 3. Upload additional images
     if (Array.isArray(files.images)) {
         req.body.images = [];
-        console.log(`📤 Uploading ${files.images.length} additional image(s)...`);
 
         try {
             await Promise.all(
                 files.images.map((img, index) => {
-                    console.log(`📤 Uploading image ${index + 1}:`, img.originalname);
-                    console.log("📁 image size:", img.size);
-                    console.log("📁 image mimetype:", img.mimetype);
-                    console.log("📁 image buffer length:", img.buffer?.length);
+                   
 
                     return new Promise((resolve, reject) => {
                         const cleanedName = img.originalname.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_");
@@ -140,7 +127,6 @@ const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
                             },
                             (error, result) => {
                                 if (error) {
-                                    console.error("🚨 Cloudinary image upload error (FULL):", error);
                                     return reject(new AppError(500, `Image Upload Failed: ${error.message || error}`));
                                 }
                                 req.body.images.push(result.secure_url);
@@ -157,7 +143,6 @@ const uploadImagesToCloudinary = expressAsyncHandler(async (req, res, next) => {
         }
     }
 
-    console.log("✅ All uploads completed successfully.");
     next();
 });
 
