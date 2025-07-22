@@ -50,10 +50,10 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 //
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 // Routes
-app.use("/api/v1/users", require("../routes/userRoute"));
-app.use("/api/v1/auth", require("../routes/authRoute"));
+// app.use("/api/v1/users", require("../routes/userRoute"));
+// app.use("/api/v1/auth", require("../routes/authRoute"));
 app.use("/api/v1/categories", categoryRouter);
 app.use("/api/v1/subCategories", subCategoryRouter);
 app.use("/api/v1/brands", brandRouter);

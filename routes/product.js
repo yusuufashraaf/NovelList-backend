@@ -36,9 +36,9 @@ productRouter
         parseSubcategoryArray,
         addProductValidator,
         addproduct);
-
-productRouter.get("/genres", getUniqueGenres);
-productRouter.get("/authors", getUniqueAuthors);
+//
+// productRouter.get("/genres", getUniqueGenres);
+// productRouter.get("/authors", getUniqueAuthors);
 
 productRouter
   .route("/:id")
