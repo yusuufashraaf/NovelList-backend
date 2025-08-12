@@ -4,17 +4,36 @@ const app = require("./app");
 const server = http.createServer(app);
 const connectDB = require("../config/connectDB");
 require("dotenv").config();
+const { createAdapter } = require("@socket.io/redis-adapter");
+const { createClient } = require("redis");
 
 const io = require("socket.io")(server, {
   cors: {
-    origin: ["http://localhost:4200", "https://novel-nest-two.vercel.app"],
+    origin: [
+      "http://localhost:4200",
+      "https://novel-nest-two.vercel.app",
+      "https://1d8f222f-e6cd-4b30-8295-eee3fc85c4bc-00-x25a0w5n7axr.janeway.replit.dev",
+    ],
     credentials: true,
   },
 });
 
 app.set("io", io);
 
+const pubClient = createClient({ url: "redis://localhost:6379" });
+const subClient = pubClient.duplicate();
+
+Promise.all([pubClient.connect(), subClient.connect()])
+  .then(() => {
+    io.adapter(createAdapter(pubClient, subClient));
+    console.log("✅ Redis adapter connected.");
+  })
+  .catch((err) => {
+    console.error("❌ Redis connection failed:", err);
+  });
+
 const adminSocketMap = new Map();
+app.set("adminSocketMap", adminSocketMap);
 
 io.on("connection", async (socket) => {
   socket.on("connectToserver", async (token, data) => {
@@ -33,9 +52,12 @@ io.on("connection", async (socket) => {
     }
     //  User logic
     if (user.role === "user") {
+      console.log("client connected");
+      console.log("added the socket id to user");
       if (adminSocketMap.size > 0) {
         for (const [key, value] of adminSocketMap) {
           if (data) {
+            console.log("data sent to admin");
             io.to(value).emit("newNotification", data);
           }
         }

@@ -7,7 +7,7 @@ const Category = require("../models/category");
 const multer = require("multer");
 const sharp = require("sharp");
 const cloudinary = require("cloudinary").v2;
-const redisClient = require("../config/redisClient");
+const { redisClient } = require("../config/redisClient");
 const streamifier = require("streamifier");
 
 // --- Multer Setup for Memory Upload ---
@@ -203,9 +203,9 @@ const getAllProducts = expressAsyncHandler(async (req, res, next) => {
   };
 
   try {
-  await redisClient.set(redisKey, JSON.stringify(responseData), {
-    ex: 1800, // expiration in seconds
-  });
+    await redisClient.set(redisKey, JSON.stringify(responseData), {
+      ex: 30, // expiration in seconds
+    });
   } catch (err) {
     console.error("Redis SET error:", err);
   }
