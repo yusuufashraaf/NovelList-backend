@@ -4,9 +4,11 @@ const app = require("./app");
 const server = http.createServer(app);
 const connectDB = require("../config/connectDB");
 require("dotenv").config();
+
 const { createAdapter } = require("@socket.io/redis-adapter");
 const { createClient } = require("redis");
 
+// --- Socket.IO setup ---
 const io = require("socket.io")(server, {
   cors: {
     origin: [
@@ -18,9 +20,11 @@ const io = require("socket.io")(server, {
   },
 });
 
+// Attach io to app (for controllers to emit events if needed)
 app.set("io", io);
 
-const pubClient = createClient({ url: "redis://localhost:6379" });
+// --- Redis Pub/Sub (for Socket.IO adapter) ---
+const pubClient = createClient({ url: process.env.REDIS_URL });
 const subClient = pubClient.duplicate();
 
 Promise.all([pubClient.connect(), subClient.connect()])
@@ -29,12 +33,27 @@ Promise.all([pubClient.connect(), subClient.connect()])
     console.log("✅ Redis adapter connected.");
   })
   .catch((err) => {
-    console.error("❌ Redis connection failed:", err);
+    console.error("❌ Redis connection failed:", err.message);
   });
 
+// --- Redis Key-Value client (for caching) ---
+const redisClient = createClient({ url: process.env.REDIS_URL });
+redisClient.on("error", (err) => console.error("Redis error:", err));
+
+(async () => {
+  try {
+    await redisClient.connect();
+    console.log("✅ Redis key-value client connected");
+  } catch (err) {
+    console.error("❌ Redis key-value connection failed:", err.message);
+  }
+})();
+
+// Store admin sockets
 const adminSocketMap = new Map();
 app.set("adminSocketMap", adminSocketMap);
 
+// --- Socket.IO events ---
 io.on("connection", async (socket) => {
   socket.on("connectToserver", async (token, data) => {
     const user = await User.verifyUser(token);
@@ -43,21 +62,21 @@ io.on("connection", async (socket) => {
       return;
     }
 
-    //  Admin logic
+    // Admin logic
     if (user.role === "admin") {
       const userId = user._id.toString();
       adminSocketMap.set(userId, socket.id);
       socket.userId = userId;
-      console.log("added the socket id to admin");
+      console.log("✅ Added admin socket:", userId);
     }
-    //  User logic
+
+    // User logic
     if (user.role === "user") {
-      console.log("client connected");
-      console.log("added the socket id to user");
+      console.log("✅ User connected:", user._id.toString());
       if (adminSocketMap.size > 0) {
         for (const [key, value] of adminSocketMap) {
           if (data) {
-            console.log("data sent to admin");
+            console.log("📢 Sending notification to admin:", key);
             io.to(value).emit("newNotification", data);
           }
         }
@@ -69,23 +88,26 @@ io.on("connection", async (socket) => {
     if (socket.userId && adminSocketMap.has(socket.userId)) {
       adminSocketMap.delete(socket.userId);
       console.log(
-        `Admin with ID ${socket.userId} disconnected and removed from map.`
+        `⚠️ Admin with ID ${socket.userId} disconnected and removed from map.`
       );
     }
   });
 });
 
+// --- Server start ---
 const PORT = process.env.PORT || 3000;
-
 const Server = server.listen(PORT, () => {
   connectDB();
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
 
-//  for any error out of server or express like  lose connection to database or different error in promise functions
+// --- Global error handling ---
 process.on("unhandledRejection", (err) => {
-  console.error(`unhandledRejection error : ${err.message}`);
+  console.error(`❌ Unhandled Rejection: ${err.message}`);
   Server.close(() => {
     process.exit(1);
   });
 });
+
+// Export redisClient for controllers
+module.exports = { redisClient };
